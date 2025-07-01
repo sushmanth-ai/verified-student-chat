@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,11 +22,12 @@ const StoriesScreen = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    // Modified query to avoid composite index requirement
+    // We'll filter by expiresAt and sort client-side by createdAt
     const now = new Date();
     const q = query(
       collection(db, 'stories'),
-      where('expiresAt', '>', now),
-      orderBy('createdAt', 'desc')
+      where('expiresAt', '>', now)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -36,7 +36,14 @@ const StoriesScreen = () => {
         ...doc.data()
       })) as Story[];
       
-      setStories(storiesData);
+      // Sort by createdAt on the client side
+      const sortedStories = storiesData.sort((a, b) => {
+        const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime; // Descending order (newest first)
+      });
+      
+      setStories(sortedStories);
       setLoading(false);
     });
 
