@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Camera, X, Upload } from 'lucide-react';
 import { Button } from './ui/button';
@@ -7,7 +6,7 @@ import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 
 interface CreateStoryProps {
@@ -35,7 +34,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
         authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         authorEmail: user.email,
         createdAt: serverTimestamp(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+        expiresAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000), // ✅ FIXED
         views: []
       });
 
