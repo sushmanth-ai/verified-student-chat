@@ -1,14 +1,18 @@
 
 import React, { useState } from 'react';
 import { Home, Camera, MessageCircle, Calendar, User } from 'lucide-react';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import LoginScreen from '../components/LoginScreen';
 import HomeScreen from '../components/HomeScreen';
 import StoriesScreen from '../components/StoriesScreen';
 import ChatScreen from '../components/ChatScreen';
 import EventsScreen from '../components/EventsScreen';
 import ProfileScreen from '../components/ProfileScreen';
+import { Button } from '../components/ui/button';
 
-const Index = () => {
+const AppContent = () => {
   const [activeTab, setActiveTab] = useState('home');
+  const { user, loading, logout } = useAuth();
 
   const tabs = [
     { id: 'home', label: 'Home', icon: Home, component: HomeScreen },
@@ -18,6 +22,21 @@ const Index = () => {
     { id: 'profile', label: 'Profile', icon: User, component: ProfileScreen },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || HomeScreen;
 
   return (
@@ -26,8 +45,15 @@ const Index = () => {
       <div className="bg-white shadow-sm px-4 py-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-blue-600">CampusNet</h1>
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <span className="text-blue-600 font-semibold text-sm">JD</span>
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-semibold text-sm">
+                {user.displayName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
+              </span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={logout}>
+              Logout
+            </Button>
           </div>
         </div>
       </div>
@@ -61,6 +87,14 @@ const Index = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const Index = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 
