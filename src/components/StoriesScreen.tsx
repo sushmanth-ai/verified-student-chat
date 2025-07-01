@@ -1,19 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { Camera, User, Eye } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, where, doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { useToast } from '../hooks/use-toast';
+import { collection, query, orderBy, onSnapshot, where, Timestamp } from 'firebase/firestore';
 import CreateStory from './CreateStory';
-import { Button } from './ui/button';
 
 interface Story {
   id: string;
   content: string;
+  caption: string;
   authorId: string;
   authorName: string;
-  authorEmail: string;
   createdAt: any;
   expiresAt: any;
   views: string[];
@@ -23,80 +21,46 @@ const StoriesScreen = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    console.log('Setting up stories listener...');
     const now = new Date();
     const q = query(
       collection(db, 'stories'),
       where('expiresAt', '>', now),
-      orderBy('expiresAt', 'desc'),
       orderBy('createdAt', 'desc')
     );
     
-    const unsubscriber = onSnapshot(q, 
-      (snapshot) => {
-        console.log('Stories snapshot received, docs count:', snapshot.docs.length);
-        const storiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Story[];
-        
-        console.log('Stories data:', storiesData);
-        setStories(storiesData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching stories:', error);
-        setLoading(false);
-        toast({ title: "Error", description: "Failed to load stories", variant: "destructive" });
-      }
-    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const storiesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Story[];
+      
+      setStories(storiesData);
+      setLoading(false);
+    });
 
-    return unsubscriber;
-  }, [user, toast]);
+    return unsubscribe;
+  }, []);
 
-  const handleViewStory = async (storyId: string) => {
-    if (!user) return;
-
-    try {
-      const storyRef = doc(db, 'stories', storyId);
-      await updateDoc(storyRef, {
-        views: arrayUnion(user.uid)
-      });
-    } catch (error) {
-      console.error('Error updating story view:', error);
-    }
-  };
-
-  const getTimeRemaining = (expiresAt: any) => {
-    if (!expiresAt) return 'Unknown';
-    
+  const getTimeAgo = (timestamp: any) => {
+    if (!timestamp) return 'Just now';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
-    const expiry = expiresAt.toDate ? expiresAt.toDate() : new Date(expiresAt);
-    const diff = expiry.getTime() - now.getTime();
+    const diff = now.getTime() - date.getTime();
     
-    if (diff <= 0) return 'Expired';
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes}m ago`;
     
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
     
-    if (hours > 0) {
-      return `${hours}h ${minutes}m left`;
-    } else {
-      return `${minutes}m left`;
-    }
+    return `${Math.floor(hours / 24)}d ago`;
   };
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
           <p className="text-gray-500">Loading stories...</p>
@@ -106,58 +70,71 @@ const StoriesScreen = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50">
-      <div className="p-4 space-y-4">
-        <CreateStory onStoryCreated={() => console.log('Story created')} />
+    <div className="h-full bg-gray-50">
+      {/* Create Story Section */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <CreateStory onStoryCreated={() => {}} />
+      </div>
+
+      {/* Stories Grid */}
+      <div className="p-4">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Campus Stories</h2>
         
         {stories.length === 0 ? (
           <div className="text-center py-8">
-            <Camera size={48} className="mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500 mb-4">No stories yet. Be the first to share your moment!</p>
-            <p className="text-sm text-gray-400">Stories disappear after 24 hours</p>
+            <p className="text-gray-500">No active stories. Be the first to create one!</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             {stories.map((story) => (
               <div
                 key={story.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleViewStory(story.id)}
+                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group"
               >
-                {/* Story Header */}
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full flex items-center justify-center">
-                      <User size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{story.authorName}</h3>
-                      <p className="text-sm text-gray-500">
-                        {getTimeRemaining(story.expiresAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-1 text-gray-500">
-                    <Eye size={16} />
-                    <span className="text-sm">{story.views.length}</span>
-                  </div>
-                </div>
-
-                {/* Story Content */}
-                <div className="px-4 pb-4">
-                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{story.content}</p>
-                </div>
-
-                {/* Story Footer */}
-                <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                  <p className="text-xs text-gray-500">
-                    Posted {story.createdAt?.toDate?.()?.toLocaleString() || 'just now'}
+                {/* Story Preview */}
+                <div className="h-32 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 relative flex items-center justify-center p-3">
+                  <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all"></div>
+                  <p className="text-white font-medium text-sm text-center relative z-10 line-clamp-3">
+                    {story.content || story.caption}
                   </p>
+                  
+                  {/* User Avatar */}
+                  <div className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-white">
+                    <User size={16} className="text-gray-700" />
+                  </div>
+                </div>
+
+                {/* Story Info */}
+                <div className="p-3">
+                  <h3 className="font-semibold text-gray-900 text-sm truncate">{story.authorName}</h3>
+                  {story.caption && story.content && (
+                    <p className="text-gray-600 text-xs truncate">{story.caption}</p>
+                  )}
+                  <p className="text-gray-400 text-xs mt-1">{getTimeAgo(story.createdAt)}</p>
                 </div>
               </div>
             ))}
           </div>
         )}
+
+        {/* Story Stats */}
+        <div className="mt-6 bg-white rounded-xl p-4 border border-gray-100">
+          <h3 className="font-semibold text-gray-900 mb-3">Today's Activity</h3>
+          <div className="flex justify-between text-center">
+            <div>
+              <div className="text-2xl font-bold text-blue-600">{stories.length}</div>
+              <div className="text-xs text-gray-500">Active Stories</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-purple-600">{stories.filter(s => s.authorId === user?.uid).length}</div>
+              <div className="text-xs text-gray-500">Your Stories</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600">{stories.reduce((acc, story) => acc + story.views.length, 0)}</div>
+              <div className="text-xs text-gray-500">Total Views</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
