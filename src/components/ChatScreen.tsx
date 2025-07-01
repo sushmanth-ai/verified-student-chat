@@ -18,6 +18,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useToast } from '../hooks/use-toast';
 import StudyPartnersModal from './StudyPartnersModal';
+import CampusGroupsModal from './CampusGroupsModal';
 
 interface Message {
   id: string;
@@ -50,6 +51,7 @@ const ChatScreen: React.FC = () => {
   const [newGroupName, setNewGroupName] = useState('');
   const [joinGroupName, setJoinGroupName] = useState('');
   const [showStudyPartners, setShowStudyPartners] = useState(false);
+  const [showCampusGroups, setShowCampusGroups] = useState(false);
 
   const [loading, setLoading] = useState(true);
 
@@ -219,13 +221,20 @@ const ChatScreen: React.FC = () => {
   // Default view: list of chats and group actions
   return (
     <div className="h-full flex flex-col bg-gray-50">
+      {/* Header */}
       <div className="p-4 bg-white border-b flex items-center justify-between">
         <h2 className="text-lg font-bold">Messages & Groups</h2>
-        <Button onClick={() => setShowStudyPartners(true)}>
-          <UserPlus />
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button onClick={() => setShowStudyPartners(true)}>
+            <MessageCircle /> Find Partners
+          </Button>
+          <Button onClick={() => setShowCampusGroups(true)}>
+            <UserPlus /> Join Groups
+          </Button>
+        </div>
       </div>
 
+      {/* New Group & Join UI */}
       <div className="p-4 bg-white space-y-3">
         <div className="flex space-x-2">
           <Input
@@ -249,6 +258,7 @@ const ChatScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* Chat / Group List */}
       <div className="flex-1 overflow-y-auto">
         {chats.map(chat => (
           <div
@@ -260,4 +270,21 @@ const ChatScreen: React.FC = () => {
               <User className="text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibo
+              <h3 className="font-semibold truncate">{chat.name}</h3>
+              <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
+            </div>
+            <span className="text-xs text-gray-400">
+              {chat.lastMessageTime?.toDate?.(() => new Date()).toLocaleTimeString() || 'Now'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick Actions Modal Triggers */}
+      <StudyPartnersModal isOpen={showStudyPartners} onClose={() => setShowStudyPartners(false)} />
+      <CampusGroupsModal isOpen={showCampusGroups} onClose={() => setShowCampusGroups(false)} />
+    </div>
+  );
+};
+
+export default ChatScreen;
