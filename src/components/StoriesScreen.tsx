@@ -1,15 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  where,
-  Timestamp
-} from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where, Timestamp } from 'firebase/firestore';
 import CreateStory from './CreateStory';
 
 interface Story {
@@ -18,8 +12,8 @@ interface Story {
   caption: string;
   authorId: string;
   authorName: string;
-  createdAt: Timestamp;
-  expiresAt: Timestamp;
+  createdAt: any;
+  expiresAt: any;
   views: string[];
 }
 
@@ -29,47 +23,38 @@ const StoriesScreen = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    const now = new Date();
     const q = query(
       collection(db, 'stories'),
-      where('expiresAt', '>', Timestamp.now()), // ✅ Use Firestore Timestamp
+      where('expiresAt', '>', now),
       orderBy('createdAt', 'desc')
     );
-
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const storiesData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date(data.createdAt)),
-          expiresAt: data.expiresAt instanceof Timestamp ? data.expiresAt : Timestamp.fromDate(new Date(data.expiresAt))
-        };
-      }) as Story[];
-
-      console.log("Loaded stories:", storiesData); // ✅ Debug log
+      const storiesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Story[];
+      
       setStories(storiesData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching stories:", error);
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
-  const getTimeAgo = (timestamp: Timestamp) => {
+  const getTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Just now';
-    const date = timestamp.toDate();
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-
+    
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
     if (minutes < 60) return `${minutes}m ago`;
-
+    
     const hours = Math.floor(minutes / 60);
     if (hours < 24) return `${hours}h ago`;
-
+    
     return `${Math.floor(hours / 24)}d ago`;
   };
 
@@ -94,7 +79,7 @@ const StoriesScreen = () => {
       {/* Stories Grid */}
       <div className="p-4">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Campus Stories</h2>
-
+        
         {stories.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">No active stories. Be the first to create one!</p>
@@ -112,7 +97,7 @@ const StoriesScreen = () => {
                   <p className="text-white font-medium text-sm text-center relative z-10 line-clamp-3">
                     {story.content || story.caption}
                   </p>
-
+                  
                   {/* User Avatar */}
                   <div className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-white">
                     <User size={16} className="text-gray-700" />
