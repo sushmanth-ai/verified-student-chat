@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, User, Send } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -23,8 +24,6 @@ interface Chat {
   lastMessage: string;
   lastMessageTime: any;
   unreadCount: number;
-  name?: string;
-  isGroup?: boolean;
 }
 
 const ChatScreen = () => {
