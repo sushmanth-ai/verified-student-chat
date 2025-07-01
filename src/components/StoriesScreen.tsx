@@ -1,11 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
-import { User, Trash2 } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, onSnapshot, where, deleteDoc, doc } from 'firebase/firestore';
-import { useToast } from '../hooks/use-toast';
+import { collection, query, orderBy, onSnapshot, where, Timestamp } from 'firebase/firestore';
 import CreateStory from './CreateStory';
-import { Button } from './ui/button';
 
 interface Story {
   id: string;
@@ -22,15 +21,13 @@ const StoriesScreen = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
-    // Modified query to avoid composite index requirement
-    // We'll filter by expiresAt and sort client-side by createdAt
     const now = new Date();
     const q = query(
       collection(db, 'stories'),
-      where('expiresAt', '>', now)
+      where('expiresAt', '>', now),
+      orderBy('createdAt', 'desc')
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -39,39 +36,12 @@ const StoriesScreen = () => {
         ...doc.data()
       })) as Story[];
       
-      // Sort by createdAt on the client side
-      const sortedStories = storiesData.sort((a, b) => {
-        const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
-        const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
-        return bTime - aTime; // Descending order (newest first)
-      });
-      
-      setStories(sortedStories);
+      setStories(storiesData);
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
-
-  const handleDeleteStory = async (storyId: string) => {
-    if (!user) return;
-
-    const story = stories.find(s => s.id === storyId);
-    if (!story || story.authorId !== user.uid) {
-      toast({ title: "Error", description: "You can only delete your own stories", variant: "destructive" });
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to delete this story?')) {
-      try {
-        await deleteDoc(doc(db, 'stories', storyId));
-        toast({ title: "Story deleted", description: "Your story has been removed." });
-      } catch (error) {
-        console.error('Error deleting story:', error);
-        toast({ title: "Error", description: "Failed to delete story", variant: "destructive" });
-      }
-    }
-  };
 
   const getTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Just now';
@@ -119,23 +89,8 @@ const StoriesScreen = () => {
             {stories.map((story) => (
               <div
                 key={story.id}
-                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group relative"
+                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group"
               >
-                {/* Delete button for own stories */}
-                {story.authorId === user?.uid && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteStory(story.id);
-                    }}
-                    className="absolute top-2 right-2 z-10 bg-black bg-opacity-50 text-white hover:bg-opacity-70 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                )}
-
                 {/* Story Preview */}
                 <div className="h-32 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 relative flex items-center justify-center p-3">
                   <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all"></div>

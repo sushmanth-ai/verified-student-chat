@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
@@ -62,13 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast({ title: "Welcome!", description: "You've successfully signed in with Google." });
     } catch (error: any) {
       console.error('Google sign-in error:', error);
-      if (error.code === 'auth/popup-blocked') {
-        toast({ 
-          title: "Pop-up Blocked", 
-          description: "Please allow pop-ups for this site and try again. Check your browser's pop-up blocker settings.", 
-          variant: "destructive" 
-        });
-      } else if (error.code === 'auth/unauthorized-domain') {
+      if (error.code === 'auth/unauthorized-domain') {
         toast({ 
           title: "Domain Authorization Required", 
           description: "Please add this domain to your Firebase authorized domains in the Firebase Console under Authentication > Settings > Authorized domains.", 

@@ -1,21 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, User, Trash2, Reply } from 'lucide-react';
+import { Heart, MessageCircle, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  doc,
-  updateDoc,
-  arrayUnion,
-  arrayRemove,
-  addDoc,
-  getDocs,
-  serverTimestamp,
-  deleteDoc
-} from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import CreatePost from './CreatePost';
 import { Button } from './ui/button';
@@ -23,15 +11,6 @@ import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 
 interface Comment {
-  id: string;
-  content: string;
-  authorId: string;
-  authorName: string;
-  createdAt: any;
-  replies?: Reply[];
-}
-
-interface Reply {
   id: string;
   content: string;
   authorId: string;
@@ -55,29 +34,31 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({});
-  const [replyInputs, setReplyInputs] = useState<{ [commentId: string]: string }>({});
   const [showComments, setShowComments] = useState<{ [postId: string]: boolean }>({});
-  const [showReplies, setShowReplies] = useState<{ [commentId: string]: boolean }>({});
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'));
-
-    const unsubscribe = onSnapshot(
-      q,
+    console.log('Setting up posts listener...');
+    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, 
       async (snapshot) => {
+        console.log('Posts snapshot received, docs count:', snapshot.docs.length);
         const postsData: Post[] = [];
-
+        
         for (const docSnapshot of snapshot.docs) {
           const postData = docSnapshot.data();
-
+          console.log('Post data:', postData);
+          
+          // Get comments for this post
           try {
             const commentsQuery = query(
-              collection(db, 'posts', docSnapshot.id, 'comments')
+              collection(db, 'posts', docSnapshot.id, 'comments'),
+              orderBy('createdAt', 'asc')
             );
             const commentsSnapshot = await getDocs(commentsQuery);
-            const comments = commentsSnapshot.docs.map((commentDoc) => ({
+            const comments = commentsSnapshot.docs.map(commentDoc => ({
               id: commentDoc.id,
               ...commentDoc.data()
             })) as Comment[];
@@ -89,6 +70,7 @@ const HomeScreen = () => {
             } as Post);
           } catch (commentError) {
             console.error('Error fetching comments for post:', docSnapshot.id, commentError);
+            // Add post without comments if comment fetching fails
             postsData.push({
               id: docSnapshot.id,
               ...postData,
@@ -96,15 +78,9 @@ const HomeScreen = () => {
             } as Post);
           }
         }
-
-        // Sort by createdAt on client side
-        const sortedPosts = postsData.sort((a, b) => {
-          const timeA = a.createdAt?.toDate?.() || new Date(0);
-          const timeB = b.createdAt?.toDate?.() || new Date(0);
-          return timeB.getTime() - timeA.getTime();
-        });
-
-        setPosts(sortedPosts);
+        
+        console.log('Final posts data:', postsData);
+        setPosts(postsData);
         setLoading(false);
         setError(null);
       },
@@ -112,7 +88,7 @@ const HomeScreen = () => {
         console.error('Error fetching posts:', error);
         setError('Failed to load posts. Please try again.');
         setLoading(false);
-        toast({ title: 'Error', description: 'Failed to load posts', variant: 'destructive' });
+        toast({ title: "Error", description: "Failed to load posts", variant: "destructive" });
       }
     );
 
@@ -122,39 +98,25 @@ const HomeScreen = () => {
   const handleLike = async (postId: string) => {
     if (!user) return;
 
-    const post = posts.find((p) => p.id === postId);
+    const post = posts.find(p => p.id === postId);
     if (!post) return;
 
     const isLiked = post.likes.includes(user.uid);
     const postRef = doc(db, 'posts', postId);
 
     try {
-      await updateDoc(postRef, {
-        likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
-      });
+      if (isLiked) {
+        await updateDoc(postRef, {
+          likes: arrayRemove(user.uid)
+        });
+      } else {
+        await updateDoc(postRef, {
+          likes: arrayUnion(user.uid)
+        });
+      }
     } catch (error) {
       console.error('Error updating like:', error);
-      toast({ title: 'Error', description: 'Failed to update like', variant: 'destructive' });
-    }
-  };
-
-  const handleDeletePost = async (postId: string) => {
-    if (!user) return;
-
-    const post = posts.find((p) => p.id === postId);
-    if (!post || post.authorId !== user.uid) {
-      toast({ title: 'Error', description: 'You can only delete your own posts', variant: 'destructive' });
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      try {
-        await deleteDoc(doc(db, 'posts', postId));
-        toast({ title: 'Post deleted', description: 'Your post has been removed.' });
-      } catch (error) {
-        console.error('Error deleting post:', error);
-        toast({ title: 'Error', description: 'Failed to delete post', variant: 'destructive' });
-      }
+      toast({ title: "Error", description: "Failed to update like", variant: "destructive" });
     }
   };
 
@@ -166,44 +128,19 @@ const HomeScreen = () => {
         content: commentInputs[postId].trim(),
         authorId: user.uid,
         authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-        createdAt: serverTimestamp(),
-        replies: []
+        createdAt: new Date()
       });
 
-      setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
-      toast({ title: 'Comment added!', description: 'Your comment has been posted.' });
+      setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      toast({ title: "Comment added!", description: "Your comment has been posted." });
     } catch (error) {
       console.error('Error adding comment:', error);
-      toast({ title: 'Error', description: 'Failed to add comment', variant: 'destructive' });
-    }
-  };
-
-  const handleReply = async (postId: string, commentId: string) => {
-    if (!user || !replyInputs[commentId]?.trim()) return;
-
-    try {
-      // For simplicity, we'll add replies as a subcollection
-      await addDoc(collection(db, 'posts', postId, 'comments', commentId, 'replies'), {
-        content: replyInputs[commentId].trim(),
-        authorId: user.uid,
-        authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-        createdAt: serverTimestamp()
-      });
-
-      setReplyInputs((prev) => ({ ...prev, [commentId]: '' }));
-      toast({ title: 'Reply added!', description: 'Your reply has been posted.' });
-    } catch (error) {
-      console.error('Error adding reply:', error);
-      toast({ title: 'Error', description: 'Failed to add reply', variant: 'destructive' });
+      toast({ title: "Error", description: "Failed to add comment", variant: "destructive" });
     }
   };
 
   const toggleComments = (postId: string) => {
-    setShowComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
-  };
-
-  const toggleReplies = (commentId: string) => {
-    setShowReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
+    setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }));
   };
 
   if (loading) {
@@ -232,17 +169,15 @@ const HomeScreen = () => {
     <div className="h-full overflow-y-auto bg-gray-50">
       <div className="p-4 space-y-4">
         <CreatePost onPostCreated={() => console.log('Post created')} />
-
+        
         {posts.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">No posts yet. Be the first to share something!</p>
           </div>
         ) : (
           posts.map((post) => (
-            <div
-              key={post.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
-            >
+            <div key={post.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+              {/* Post Header */}
               <div className="p-4 flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                   <User size={20} className="text-white" />
@@ -250,44 +185,29 @@ const HomeScreen = () => {
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900">{post.authorName}</h3>
                   <p className="text-sm text-gray-500">
-                    {post.createdAt?.toDate
-                      ? post.createdAt.toDate().toLocaleString()
-                      : 'Just now'}
+                    {post.createdAt?.toDate?.()?.toLocaleString() || 'Just now'}
                   </p>
                 </div>
-                {post.authorId === user?.uid && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeletePost(post.id)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                )}
               </div>
 
+              {/* Post Content */}
               <div className="px-4 pb-3">
-                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                  {post.content}
-                </p>
+                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{post.content}</p>
               </div>
 
+              {/* Post Actions */}
               <div className="px-4 py-3 border-t border-gray-50">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
                       className={`flex items-center space-x-2 transition-colors ${
-                        post.likes.includes(user?.uid || '')
-                          ? 'text-red-500'
+                        post.likes.includes(user?.uid || '') 
+                          ? 'text-red-500' 
                           : 'text-gray-600 hover:text-red-500'
                       }`}
                     >
-                      <Heart
-                        size={18}
-                        fill={post.likes.includes(user?.uid || '') ? 'currentColor' : 'none'}
-                      />
+                      <Heart size={18} fill={post.likes.includes(user?.uid || '') ? 'currentColor' : 'none'} />
                       <span className="text-sm font-medium">{post.likes.length}</span>
                     </button>
                     <button
@@ -300,23 +220,21 @@ const HomeScreen = () => {
                   </div>
                 </div>
 
+                {/* Comment Input */}
                 <div className="flex items-center space-x-2 mb-3">
                   <Input
                     placeholder="Write a comment..."
                     value={commentInputs[post.id] || ''}
-                    onChange={(e) =>
-                      setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
-                    }
+                    onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
                     className="flex-1"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
-                        e.preventDefault();
                         handleComment(post.id);
                       }
                     }}
                   />
-                  <Button
-                    size="sm"
+                  <Button 
+                    size="sm" 
                     onClick={() => handleComment(post.id)}
                     disabled={!commentInputs[post.id]?.trim()}
                   >
@@ -324,8 +242,9 @@ const HomeScreen = () => {
                   </Button>
                 </div>
 
+                {/* Comments */}
                 {showComments[post.id] && post.comments.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {post.comments.map((comment) => (
                       <Card key={comment.id} className="bg-gray-50 border-0">
                         <CardContent className="p-3">
@@ -334,48 +253,8 @@ const HomeScreen = () => {
                               <User size={12} className="text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">
-                                {comment.authorName}
-                              </p>
+                              <p className="text-sm font-medium text-gray-900">{comment.authorName}</p>
                               <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
-                              
-                              <div className="flex items-center space-x-2 mt-2">
-                                <button
-                                  onClick={() => toggleReplies(comment.id)}
-                                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                                >
-                                  <Reply size={12} />
-                                  <span>Reply</span>
-                                </button>
-                              </div>
-
-                              {showReplies[comment.id] && (
-                                <div className="mt-2">
-                                  <div className="flex items-center space-x-2">
-                                    <Input
-                                      placeholder="Write a reply..."
-                                      value={replyInputs[comment.id] || ''}
-                                      onChange={(e) =>
-                                        setReplyInputs((prev) => ({ ...prev, [comment.id]: e.target.value }))
-                                      }
-                                      className="flex-1 text-sm"
-                                      onKeyPress={(e) => {
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          handleReply(post.id, comment.id);
-                                        }
-                                      }}
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleReply(post.id, comment.id)}
-                                      disabled={!replyInputs[comment.id]?.trim()}
-                                    >
-                                      Reply
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </CardContent>
