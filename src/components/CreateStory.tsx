@@ -1,10 +1,9 @@
 
 import React, { useState } from 'react';
-import { Camera, X, Upload } from 'lucide-react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Camera, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -15,33 +14,33 @@ interface CreateStoryProps {
 }
 
 const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState('');
-  const [caption, setCaption] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || (!content.trim() && !caption.trim())) return;
+    if (!content.trim() || !user) return;
 
     setLoading(true);
     try {
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours from now
+
       await addDoc(collection(db, 'stories'), {
         content: content.trim(),
-        caption: caption.trim(),
         authorId: user.uid,
         authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         authorEmail: user.email,
         createdAt: serverTimestamp(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+        expiresAt: expiresAt,
         views: []
       });
 
       setContent('');
-      setCaption('');
-      setIsOpen(false);
+      setIsExpanded(false);
       toast({ title: "Story created!", description: "Your story has been shared and will be visible for 24 hours." });
       onStoryCreated?.();
     } catch (error) {
@@ -52,15 +51,18 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
     }
   };
 
-  if (!isOpen) {
+  if (!isExpanded) {
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl py-3 px-4 flex items-center justify-center space-x-2 hover:shadow-lg transition-all"
-      >
-        <Camera size={20} />
-        <span className="font-semibold">Create Your Story</span>
-      </button>
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="w-full text-left text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Share your story...
+          </button>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -72,9 +74,8 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
           variant="ghost"
           size="sm"
           onClick={() => {
-            setIsOpen(false);
+            setIsExpanded(false);
             setContent('');
-            setCaption('');
           }}
         >
           <X size={18} />
@@ -82,42 +83,24 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Story Content
-            </label>
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="What's happening on campus right now?"
-              className="min-h-[80px] resize-none"
-              maxLength={200}
-            />
-            <div className="text-right">
-              <span className="text-xs text-gray-500">{content.length}/200</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Caption (Optional)
-            </label>
-            <Input
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Add a caption..."
-              maxLength={100}
-            />
-          </div>
-
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="What's your story today?"
+            className="min-h-[100px] resize-none"
+            maxLength={300}
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Button type="button" variant="ghost" size="sm">
-                <Upload size={18} className="mr-1" />
-                Upload Photo
+                <Camera size={18} className="mr-1" />
+                Photo
               </Button>
+              <span className="text-xs text-gray-500">
+                {content.length}/300 • Expires in 24h
+              </span>
             </div>
-            <Button type="submit" disabled={(!content.trim() && !caption.trim()) || loading}>
+            <Button type="submit" disabled={!content.trim() || loading}>
               {loading ? 'Creating...' : 'Share Story'}
             </Button>
           </div>
