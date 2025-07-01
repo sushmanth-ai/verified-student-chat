@@ -6,6 +6,8 @@ import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where 
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useToast } from '../hooks/use-toast';
+import StudyPartnersModal from './StudyPartnersModal';
+import CampusGroupsModal from './CampusGroupsModal';
 
 interface Message {
   id: string;
@@ -31,6 +33,8 @@ const ChatScreen = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showStudyPartners, setShowStudyPartners] = useState(false);
+  const [showCampusGroups, setShowCampusGroups] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -275,14 +279,30 @@ const ChatScreen = () => {
       {/* Quick Actions */}
       <div className="bg-white border-t border-gray-200 p-4">
         <div className="grid grid-cols-2 gap-3">
-          <button className="bg-blue-50 text-blue-600 rounded-lg py-3 px-4 text-sm font-medium hover:bg-blue-100 transition-colors">
+          <button 
+            onClick={() => setShowStudyPartners(true)}
+            className="bg-blue-50 text-blue-600 rounded-lg py-3 px-4 text-sm font-medium hover:bg-blue-100 transition-colors"
+          >
             Find Study Partners
           </button>
-          <button className="bg-green-50 text-green-600 rounded-lg py-3 px-4 text-sm font-medium hover:bg-green-100 transition-colors">
+          <button 
+            onClick={() => setShowCampusGroups(true)}
+            className="bg-green-50 text-green-600 rounded-lg py-3 px-4 text-sm font-medium hover:bg-green-100 transition-colors"
+          >
             Join Campus Groups
           </button>
         </div>
       </div>
+
+      {/* Modals */}
+      <StudyPartnersModal 
+        isOpen={showStudyPartners} 
+        onClose={() => setShowStudyPartners(false)} 
+      />
+      <CampusGroupsModal 
+        isOpen={showCampusGroups} 
+        onClose={() => setShowCampusGroups(false)} 
+      />
     </div>
   );
 };

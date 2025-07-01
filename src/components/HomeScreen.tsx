@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, User } from 'lucide-react';
+import { Heart, MessageCircle, User, Trash2, Reply } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import {
@@ -13,7 +13,8 @@ import {
   arrayRemove,
   addDoc,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import CreatePost from './CreatePost';
@@ -22,6 +23,15 @@ import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 
 interface Comment {
+  id: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  createdAt: any;
+  replies?: Reply[];
+}
+
+interface Reply {
   id: string;
   content: string;
   authorId: string;
@@ -45,12 +55,14 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({});
+  const [replyInputs, setReplyInputs] = useState<{ [commentId: string]: string }>({});
   const [showComments, setShowComments] = useState<{ [postId: string]: boolean }>({});
+  const [showReplies, setShowReplies] = useState<{ [commentId: string]: boolean }>({});
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'posts'));
 
     const unsubscribe = onSnapshot(
       q,
@@ -62,8 +74,7 @@ const HomeScreen = () => {
 
           try {
             const commentsQuery = query(
-              collection(db, 'posts', docSnapshot.id, 'comments'),
-              orderBy('createdAt', 'asc')
+              collection(db, 'posts', docSnapshot.id, 'comments')
             );
             const commentsSnapshot = await getDocs(commentsQuery);
             const comments = commentsSnapshot.docs.map((commentDoc) => ({
@@ -86,7 +97,14 @@ const HomeScreen = () => {
           }
         }
 
-        setPosts(postsData);
+        // Sort by createdAt on client side
+        const sortedPosts = postsData.sort((a, b) => {
+          const timeA = a.createdAt?.toDate?.() || new Date(0);
+          const timeB = b.createdAt?.toDate?.() || new Date(0);
+          return timeB.getTime() - timeA.getTime();
+        });
+
+        setPosts(sortedPosts);
         setLoading(false);
         setError(null);
       },
@@ -120,6 +138,26 @@ const HomeScreen = () => {
     }
   };
 
+  const handleDeletePost = async (postId: string) => {
+    if (!user) return;
+
+    const post = posts.find((p) => p.id === postId);
+    if (!post || post.authorId !== user.uid) {
+      toast({ title: 'Error', description: 'You can only delete your own posts', variant: 'destructive' });
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this post?')) {
+      try {
+        await deleteDoc(doc(db, 'posts', postId));
+        toast({ title: 'Post deleted', description: 'Your post has been removed.' });
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        toast({ title: 'Error', description: 'Failed to delete post', variant: 'destructive' });
+      }
+    }
+  };
+
   const handleComment = async (postId: string) => {
     if (!user || !commentInputs[postId]?.trim()) return;
 
@@ -128,7 +166,8 @@ const HomeScreen = () => {
         content: commentInputs[postId].trim(),
         authorId: user.uid,
         authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-        createdAt: serverTimestamp() // ✅ FIXED
+        createdAt: serverTimestamp(),
+        replies: []
       });
 
       setCommentInputs((prev) => ({ ...prev, [postId]: '' }));
@@ -139,8 +178,32 @@ const HomeScreen = () => {
     }
   };
 
+  const handleReply = async (postId: string, commentId: string) => {
+    if (!user || !replyInputs[commentId]?.trim()) return;
+
+    try {
+      // For simplicity, we'll add replies as a subcollection
+      await addDoc(collection(db, 'posts', postId, 'comments', commentId, 'replies'), {
+        content: replyInputs[commentId].trim(),
+        authorId: user.uid,
+        authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+        createdAt: serverTimestamp()
+      });
+
+      setReplyInputs((prev) => ({ ...prev, [commentId]: '' }));
+      toast({ title: 'Reply added!', description: 'Your reply has been posted.' });
+    } catch (error) {
+      console.error('Error adding reply:', error);
+      toast({ title: 'Error', description: 'Failed to add reply', variant: 'destructive' });
+    }
+  };
+
   const toggleComments = (postId: string) => {
     setShowComments((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
+  const toggleReplies = (commentId: string) => {
+    setShowReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
   if (loading) {
@@ -192,6 +255,16 @@ const HomeScreen = () => {
                       : 'Just now'}
                   </p>
                 </div>
+                {post.authorId === user?.uid && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeletePost(post.id)}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
               </div>
 
               <div className="px-4 pb-3">
@@ -252,7 +325,7 @@ const HomeScreen = () => {
                 </div>
 
                 {showComments[post.id] && post.comments.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {post.comments.map((comment) => (
                       <Card key={comment.id} className="bg-gray-50 border-0">
                         <CardContent className="p-3">
@@ -265,6 +338,44 @@ const HomeScreen = () => {
                                 {comment.authorName}
                               </p>
                               <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
+                              
+                              <div className="flex items-center space-x-2 mt-2">
+                                <button
+                                  onClick={() => toggleReplies(comment.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+                                >
+                                  <Reply size={12} />
+                                  <span>Reply</span>
+                                </button>
+                              </div>
+
+                              {showReplies[comment.id] && (
+                                <div className="mt-2">
+                                  <div className="flex items-center space-x-2">
+                                    <Input
+                                      placeholder="Write a reply..."
+                                      value={replyInputs[comment.id] || ''}
+                                      onChange={(e) =>
+                                        setReplyInputs((prev) => ({ ...prev, [comment.id]: e.target.value }))
+                                      }
+                                      className="flex-1 text-sm"
+                                      onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          handleReply(post.id, comment.id);
+                                        }
+                                      }}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleReply(post.id, comment.id)}
+                                      disabled={!replyInputs[comment.id]?.trim()}
+                                    >
+                                      Reply
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </CardContent>
