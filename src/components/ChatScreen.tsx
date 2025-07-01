@@ -64,17 +64,17 @@ const ChatScreen = () => {
     return unsubscribe;
   }, [user]);
 
-  // Load messages for selected chat
+  // Load messages for selected chat - Modified to avoid composite index requirement
   useEffect(() => {
     if (!selectedChat) {
       setMessages([]);
       return;
     }
 
+    // Query messages by chatId only, then sort on client side
     const q = query(
       collection(db, 'messages'),
-      where('chatId', '==', selectedChat),
-      orderBy('createdAt', 'asc')
+      where('chatId', '==', selectedChat)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -83,7 +83,14 @@ const ChatScreen = () => {
         ...doc.data()
       })) as Message[];
       
-      setMessages(messagesData);
+      // Sort messages by createdAt on the client side
+      const sortedMessages = messagesData.sort((a, b) => {
+        const timeA = a.createdAt?.toDate?.() || new Date(0);
+        const timeB = b.createdAt?.toDate?.() || new Date(0);
+        return timeA.getTime() - timeB.getTime();
+      });
+      
+      setMessages(sortedMessages);
     });
 
     return unsubscribe;
