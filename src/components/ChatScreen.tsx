@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, User, Send } from 'lucide-react';
+import { MessageCircle, User, Send, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where, updateDoc, doc } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useToast } from '../hooks/use-toast';
@@ -38,26 +39,39 @@ const ChatScreen = () => {
 
   // Load user's chats
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
+    console.log('Setting up chats listener for user:', user.uid);
     const q = query(
       collection(db, 'chats'),
       where('participants', 'array-contains', user.uid),
       orderBy('lastMessageTime', 'desc')
     );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Chat[];
-      
-      setChats(chatsData);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        console.log('Chats snapshot received, docs count:', snapshot.docs.length);
+        const chatsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Chat[];
+        
+        console.log('Chats data:', chatsData);
+        setChats(chatsData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error fetching chats:', error);
+        setLoading(false);
+        toast({ title: "Error", description: "Failed to load chats", variant: "destructive" });
+      }
+    );
 
     return unsubscribe;
-  }, [user]);
+  }, [user, toast]);
 
   // Load messages for selected chat
   useEffect(() => {
@@ -66,57 +80,80 @@ const ChatScreen = () => {
       return;
     }
 
+    console.log('Setting up messages listener for chat:', selectedChat);
     const q = query(
       collection(db, 'messages'),
       where('chatId', '==', selectedChat),
       orderBy('createdAt', 'asc')
     );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messagesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Message[];
-      
-      setMessages(messagesData);
-    });
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        console.log('Messages snapshot received, docs count:', snapshot.docs.length);
+        const messagesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Message[];
+        
+        console.log('Messages data:', messagesData);
+        setMessages(messagesData);
+      },
+      (error) => {
+        console.error('Error fetching messages:', error);
+        toast({ title: "Error", description: "Failed to load messages", variant: "destructive" });
+      }
+    );
 
     return unsubscribe;
-  }, [selectedChat]);
+  }, [selectedChat, toast]);
 
   const sendMessage = async () => {
     if (!user || !selectedChat || !newMessage.trim()) return;
 
+    const messageContent = newMessage.trim();
+    setNewMessage(''); // Clear input immediately for better UX
+
     try {
+      // Add message to messages collection
       await addDoc(collection(db, 'messages'), {
-        content: newMessage.trim(),
+        content: messageContent,
         senderId: user.uid,
         senderName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         chatId: selectedChat,
         createdAt: serverTimestamp()
       });
 
-      setNewMessage('');
+      // Update chat's last message
+      const chatRef = doc(db, 'chats', selectedChat);
+      await updateDoc(chatRef, {
+        lastMessage: messageContent,
+        lastMessageTime: serverTimestamp()
+      });
+
+      console.log('Message sent successfully');
     } catch (error) {
       console.error('Error sending message:', error);
       toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+      setNewMessage(messageContent); // Restore message on error
     }
   };
 
   const createNewChat = async () => {
     if (!user) return;
     
-    // For demo purposes, create a general campus chat
     try {
+      console.log('Creating new chat for user:', user.uid);
       const chatDoc = await addDoc(collection(db, 'chats'), {
         participants: [user.uid],
         participantNames: [user.displayName || user.email?.split('@')[0] || 'Anonymous'],
         lastMessage: 'Chat created',
         lastMessageTime: serverTimestamp(),
+        unreadCount: 0,
         name: 'Campus General Chat',
         isGroup: true
       });
 
+      console.log('Chat created with ID:', chatDoc.id);
       setSelectedChat(chatDoc.id);
       toast({ title: "Chat created!", description: "You can now start messaging." });
     } catch (error) {
@@ -137,6 +174,8 @@ const ChatScreen = () => {
   }
 
   if (selectedChat) {
+    const currentChat = chats.find(chat => chat.id === selectedChat);
+    
     return (
       <div className="h-full bg-gray-50 flex flex-col">
         {/* Chat Header */}
@@ -144,35 +183,46 @@ const ChatScreen = () => {
           <div className="flex items-center justify-between">
             <button 
               onClick={() => setSelectedChat(null)}
-              className="text-blue-600 font-medium"
+              className="text-blue-600 font-medium hover:text-blue-700"
             >
               ← Back to Chats
             </button>
-            <h2 className="text-lg font-bold text-gray-900">Chat</h2>
+            <h2 className="text-lg font-bold text-gray-900">
+              {currentChat?.name || 'Chat'}
+            </h2>
           </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-xs px-4 py-2 rounded-lg ${
-                  message.senderId === user?.uid
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-900 border border-gray-200'
-                }`}
-              >
-                {message.senderId !== user?.uid && (
-                  <p className="text-xs text-gray-500 mb-1">{message.senderName}</p>
-                )}
-                <p className="text-sm">{message.content}</p>
-              </div>
+          {messages.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No messages yet. Start the conversation!</p>
             </div>
-          ))}
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-xs px-4 py-2 rounded-lg ${
+                    message.senderId === user?.uid
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-gray-900 border border-gray-200'
+                  }`}
+                >
+                  {message.senderId !== user?.uid && (
+                    <p className="text-xs text-gray-500 mb-1">{message.senderName}</p>
+                  )}
+                  <p className="text-sm">{message.content}</p>
+                  <p className="text-xs opacity-70 mt-1">
+                    {message.createdAt?.toDate?.()?.toLocaleTimeString() || 'Sending...'}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Message Input */}
@@ -208,7 +258,7 @@ const ChatScreen = () => {
             onClick={createNewChat}
             className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors"
           >
-            <MessageCircle size={16} />
+            <Plus size={16} />
           </button>
         </div>
       </div>
@@ -217,6 +267,7 @@ const ChatScreen = () => {
       <div className="flex-1 overflow-y-auto">
         {chats.length === 0 ? (
           <div className="text-center py-8">
+            <MessageCircle size={48} className="mx-auto text-gray-400 mb-4" />
             <p className="text-gray-500 mb-4">No chats yet. Start a conversation!</p>
             <Button onClick={createNewChat}>Create New Chat</Button>
           </div>
