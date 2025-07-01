@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, getDocs } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import CreatePost from './CreatePost';
 import { Button } from './ui/button';
@@ -39,34 +39,45 @@ const HomeScreen = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    console.log('Setting up posts listener for user:', user.uid);
+    console.log('Setting up posts listener...');
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
+      async (snapshot) => {
         console.log('Posts snapshot received, docs count:', snapshot.docs.length);
         const postsData: Post[] = [];
         
-        snapshot.docs.forEach((docSnapshot) => {
+        for (const docSnapshot of snapshot.docs) {
           const postData = docSnapshot.data();
           console.log('Post data:', postData);
           
-          postsData.push({
-            id: docSnapshot.id,
-            content: postData.content || '',
-            authorId: postData.authorId || '',
-            authorName: postData.authorName || 'Anonymous',
-            authorEmail: postData.authorEmail || '',
-            createdAt: postData.createdAt,
-            likes: postData.likes || [],
-            comments: postData.comments || []
-          });
-        });
+          // Get comments for this post
+          try {
+            const commentsQuery = query(
+              collection(db, 'posts', docSnapshot.id, 'comments'),
+              orderBy('createdAt', 'asc')
+            );
+            const commentsSnapshot = await getDocs(commentsQuery);
+            const comments = commentsSnapshot.docs.map(commentDoc => ({
+              id: commentDoc.id,
+              ...commentDoc.data()
+            })) as Comment[];
+
+            postsData.push({
+              id: docSnapshot.id,
+              ...postData,
+              comments
+            } as Post);
+          } catch (commentError) {
+            console.error('Error fetching comments for post:', docSnapshot.id, commentError);
+            // Add post without comments if comment fetching fails
+            postsData.push({
+              id: docSnapshot.id,
+              ...postData,
+              comments: []
+            } as Post);
+          }
+        }
         
         console.log('Final posts data:', postsData);
         setPosts(postsData);
@@ -82,7 +93,7 @@ const HomeScreen = () => {
     );
 
     return unsubscribe;
-  }, [user, toast]);
+  }, [toast]);
 
   const handleLike = async (postId: string) => {
     if (!user) return;
@@ -112,21 +123,12 @@ const HomeScreen = () => {
   const handleComment = async (postId: string) => {
     if (!user || !commentInputs[postId]?.trim()) return;
 
-    const post = posts.find(p => p.id === postId);
-    if (!post) return;
-
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      content: commentInputs[postId].trim(),
-      authorId: user.uid,
-      authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-      createdAt: new Date()
-    };
-
     try {
-      const postRef = doc(db, 'posts', postId);
-      await updateDoc(postRef, {
-        comments: arrayUnion(newComment)
+      await addDoc(collection(db, 'posts', postId, 'comments'), {
+        content: commentInputs[postId].trim(),
+        authorId: user.uid,
+        authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+        createdAt: new Date()
       });
 
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
