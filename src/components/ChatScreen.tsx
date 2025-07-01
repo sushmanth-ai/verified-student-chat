@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageCircle, User, Send } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -35,14 +34,14 @@ const ChatScreen = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Load user's chats
+  // Load user's chats - Modified to avoid composite index requirement
   useEffect(() => {
     if (!user) return;
 
+    // First, get all chats where user is a participant
     const q = query(
       collection(db, 'chats'),
-      where('participants', 'array-contains', user.uid),
-      orderBy('lastMessageTime', 'desc')
+      where('participants', 'array-contains', user.uid)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -51,7 +50,14 @@ const ChatScreen = () => {
         ...doc.data()
       })) as Chat[];
       
-      setChats(chatsData);
+      // Sort by lastMessageTime on the client side
+      const sortedChats = chatsData.sort((a, b) => {
+        const timeA = a.lastMessageTime?.toDate?.() || new Date(0);
+        const timeB = b.lastMessageTime?.toDate?.() || new Date(0);
+        return timeB.getTime() - timeA.getTime();
+      });
+      
+      setChats(sortedChats);
       setLoading(false);
     });
 
