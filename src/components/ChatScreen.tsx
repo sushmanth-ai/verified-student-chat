@@ -11,7 +11,8 @@ import {
   updateDoc,
   doc,
   serverTimestamp,
-  arrayUnion
+  arrayUnion,
+  getDocs
 } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -37,18 +38,20 @@ interface Chat {
   isGroup: boolean;
 }
 
-const ChatScreen = () => {
+const ChatScreen: React.FC = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
 
   const [newGroupName, setNewGroupName] = useState('');
   const [joinGroupName, setJoinGroupName] = useState('');
+  const [showStudyPartners, setShowStudyPartners] = useState(false);
 
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
 
   // Load user's chats
   useEffect(() => {
@@ -57,17 +60,17 @@ const ChatScreen = () => {
       collection(db, 'chats'),
       where('participants', 'array-contains', user.uid)
     );
-    return onSnapshot(q, snapshot => {
+    const unsub = onSnapshot(q, snapshot => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Chat) }));
-      // sort by lastMessageTime descending
       data.sort((a, b) => {
-        const tA = a.lastMessageTime?.toDate?.()?.getTime() || 0;
-        const tB = b.lastMessageTime?.toDate?.()?.getTime() || 0;
+        const tA = a.lastMessageTime?.toDate?.().getTime() || 0;
+        const tB = b.lastMessageTime?.toDate?.().getTime() || 0;
         return tB - tA;
       });
       setChats(data);
       setLoading(false);
     });
+    return unsub;
   }, [user]);
 
   // Load messages for selected chat
@@ -80,18 +83,19 @@ const ChatScreen = () => {
       collection(db, 'messages'),
       where('chatId', '==', selectedChat)
     );
-    return onSnapshot(q, snapshot => {
+    const unsub = onSnapshot(q, snapshot => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Message) }));
-      // sort ascending
       data.sort((a, b) => {
-        const tA = a.createdAt?.toDate?.()?.getTime() || 0;
-        const tB = b.createdAt?.toDate?.()?.getTime() || 0;
+        const tA = a.createdAt?.toDate?.().getTime() || 0;
+        const tB = b.createdAt?.toDate?.().getTime() || 0;
         return tA - tB;
       });
       setMessages(data);
     });
+    return unsub;
   }, [selectedChat]);
 
+  // Send a new message
   const sendMessage = async () => {
     if (!user || !selectedChat || !newMessage.trim()) return;
     try {
@@ -102,7 +106,6 @@ const ChatScreen = () => {
         chatId: selectedChat,
         createdAt: serverTimestamp()
       });
-      // update lastMessage on chat
       await updateDoc(doc(db, 'chats', selectedChat), {
         lastMessage: newMessage.trim(),
         lastMessageTime: serverTimestamp()
@@ -114,6 +117,7 @@ const ChatScreen = () => {
     }
   };
 
+  // Create a new group chat
   const createGroup = async () => {
     if (!user || !newGroupName.trim()) return;
     try {
@@ -126,18 +130,18 @@ const ChatScreen = () => {
         isGroup: true
       });
       setSelectedChat(chatRef.id);
-      setNewGroupName('');
       toast({ title: 'Group Created', description: `"${newGroupName}" is ready!` });
+      setNewGroupName('');
     } catch (err) {
       console.error(err);
       toast({ title: 'Error', description: 'Failed to create group', variant: 'destructive' });
     }
   };
 
+  // Join an existing group by name
   const joinGroup = async () => {
     if (!user || !joinGroupName.trim()) return;
     try {
-      // find group by name
       const q = query(
         collection(db, 'chats'),
         where('name', '==', joinGroupName.trim()),
@@ -149,19 +153,19 @@ const ChatScreen = () => {
         return;
       }
       const docRef = snap.docs[0].ref;
-      // add user if not already
       await updateDoc(docRef, {
         participants: arrayUnion(user.uid),
         participantNames: arrayUnion(user.displayName || user.email?.split('@')[0] || 'Anonymous')
       });
-      setJoinGroupName('');
       toast({ title: 'Joined Group', description: `You joined "${joinGroupName}"` });
+      setJoinGroupName('');
     } catch (err) {
       console.error(err);
       toast({ title: 'Error', description: 'Failed to join group', variant: 'destructive' });
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -170,19 +174,17 @@ const ChatScreen = () => {
     );
   }
 
+  // Chat view when a chat is selected
   if (selectedChat) {
+    const chatInfo = chats.find(c => c.id === selectedChat);
     return (
       <div className="h-full flex flex-col bg-gray-50">
-        {/* Header */}
         <div className="p-4 bg-white border-b flex items-center space-x-4">
           <Button variant="ghost" onClick={() => setSelectedChat(null)}>
             ← Back
           </Button>
-          <h2 className="text-lg font-bold">
-            {chats.find(c => c.id === selectedChat)?.name || 'Chat'}
-          </h2>
+          <h2 className="text-lg font-bold">{chatInfo?.name || 'Chat'}</h2>
         </div>
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.map(m => (
             <div
@@ -190,22 +192,19 @@ const ChatScreen = () => {
               className={`flex ${m.senderId === user?.uid ? 'justify-end' : 'justify-start'}`}
             >
               <div className={`max-w-xs px-4 py-2 rounded-lg ${
-                  m.senderId === user?.uid ? 'bg-blue-500 text-white' : 'bg-white border'
-                }`}>
-                {m.senderId !== user?.uid && (
-                  <p className="text-xs text-gray-500 mb-1">{m.senderName}</p>
-                )}
+                m.senderId === user?.uid ? 'bg-blue-500 text-white' : 'bg-white border'
+              }`}>
+                {m.senderId !== user?.uid && <p className="text-xs text-gray-500 mb-1">{m.senderName}</p>}
                 <p className="text-sm">{m.content}</p>
               </div>
             </div>
           ))}
         </div>
-        {/* Input */}
         <div className="p-4 bg-white border-t flex items-center space-x-2">
           <Input
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder="Type a message…"
             onKeyPress={e => e.key === 'Enter' && sendMessage()}
             className="flex-1"
           />
@@ -217,17 +216,16 @@ const ChatScreen = () => {
     );
   }
 
+  // Default view: list of chats and group actions
   return (
     <div className="h-full flex flex-col bg-gray-50">
-      {/* Header */}
       <div className="p-4 bg-white border-b flex items-center justify-between">
         <h2 className="text-lg font-bold">Messages & Groups</h2>
-        <Button onClick={() => setNewGroupName('')}>
+        <Button onClick={() => setShowStudyPartners(true)}>
           <UserPlus />
         </Button>
       </div>
 
-      {/* New Group & Join UI */}
       <div className="p-4 bg-white space-y-3">
         <div className="flex space-x-2">
           <Input
@@ -251,7 +249,6 @@ const ChatScreen = () => {
         </div>
       </div>
 
-      {/* Chat / Group List */}
       <div className="flex-1 overflow-y-auto">
         {chats.map(chat => (
           <div
@@ -263,27 +260,4 @@ const ChatScreen = () => {
               <User className="text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold truncate">{chat.name}</h3>
-              <p className="text-sm text-gray-500 truncate">{chat.lastMessage}</p>
-            </div>
-            <span className="text-xs text-gray-400">
-              {chat.lastMessageTime?.toDate?.()?.toLocaleTimeString() || 'Now'}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="p-4 bg-white border-t">
-        <Button variant="outline" className="w-full" onClick={() => setShowStudyPartners(true)}>
-          Find Study Partners
-        </Button>
-      </div>
-
-      {/* Modals */}
-      <StudyPartnersModal isOpen={showStudyPartners} onClose={() => setShowStudyPartners(false)} />
-    </div>
-  );
-};
-
-export default ChatScreen;
+              <h3 className="font-semibo
