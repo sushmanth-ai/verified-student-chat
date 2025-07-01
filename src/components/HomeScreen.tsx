@@ -32,44 +32,68 @@ interface Post {
 const HomeScreen = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<{ [postId: string]: string }>({});
   const [showComments, setShowComments] = useState<{ [postId: string]: boolean }>({});
   const { user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('Setting up posts listener...');
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
     
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const postsData: Post[] = [];
-      
-      for (const docSnapshot of snapshot.docs) {
-        const postData = docSnapshot.data();
+    const unsubscribe = onSnapshot(q, 
+      async (snapshot) => {
+        console.log('Posts snapshot received, docs count:', snapshot.docs.length);
+        const postsData: Post[] = [];
         
-        // Get comments for this post
-        const commentsQuery = query(
-          collection(db, 'posts', docSnapshot.id, 'comments'),
-          orderBy('createdAt', 'asc')
-        );
-        const commentsSnapshot = await getDocs(commentsQuery);
-        const comments = commentsSnapshot.docs.map(commentDoc => ({
-          id: commentDoc.id,
-          ...commentDoc.data()
-        })) as Comment[];
+        for (const docSnapshot of snapshot.docs) {
+          const postData = docSnapshot.data();
+          console.log('Post data:', postData);
+          
+          // Get comments for this post
+          try {
+            const commentsQuery = query(
+              collection(db, 'posts', docSnapshot.id, 'comments'),
+              orderBy('createdAt', 'asc')
+            );
+            const commentsSnapshot = await getDocs(commentsQuery);
+            const comments = commentsSnapshot.docs.map(commentDoc => ({
+              id: commentDoc.id,
+              ...commentDoc.data()
+            })) as Comment[];
 
-        postsData.push({
-          id: docSnapshot.id,
-          ...postData,
-          comments
-        } as Post);
+            postsData.push({
+              id: docSnapshot.id,
+              ...postData,
+              comments
+            } as Post);
+          } catch (commentError) {
+            console.error('Error fetching comments for post:', docSnapshot.id, commentError);
+            // Add post without comments if comment fetching fails
+            postsData.push({
+              id: docSnapshot.id,
+              ...postData,
+              comments: []
+            } as Post);
+          }
+        }
+        
+        console.log('Final posts data:', postsData);
+        setPosts(postsData);
+        setLoading(false);
+        setError(null);
+      },
+      (error) => {
+        console.error('Error fetching posts:', error);
+        setError('Failed to load posts. Please try again.');
+        setLoading(false);
+        toast({ title: "Error", description: "Failed to load posts", variant: "destructive" });
       }
-      
-      setPosts(postsData);
-      setLoading(false);
-    });
+    );
 
     return unsubscribe;
-  }, []);
+  }, [toast]);
 
   const handleLike = async (postId: string) => {
     if (!user) return;
@@ -108,6 +132,7 @@ const HomeScreen = () => {
       });
 
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      toast({ title: "Comment added!", description: "Your comment has been posted." });
     } catch (error) {
       console.error('Error adding comment:', error);
       toast({ title: "Error", description: "Failed to add comment", variant: "destructive" });
@@ -129,10 +154,21 @@ const HomeScreen = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto bg-gray-50">
       <div className="p-4 space-y-4">
-        <CreatePost onPostCreated={() => {}} />
+        <CreatePost onPostCreated={() => console.log('Post created')} />
         
         {posts.length === 0 ? (
           <div className="text-center py-8">
