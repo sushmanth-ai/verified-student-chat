@@ -97,7 +97,6 @@ const HomeScreen = () => {
           }
         }
 
-        // Sort by createdAt on client side
         const sortedPosts = postsData.sort((a, b) => {
           const timeA = a.createdAt?.toDate?.() || new Date(0);
           const timeB = b.createdAt?.toDate?.() || new Date(0);
@@ -182,7 +181,6 @@ const HomeScreen = () => {
     if (!user || !replyInputs[commentId]?.trim()) return;
 
     try {
-      // For simplicity, we'll add replies as a subcollection
       await addDoc(collection(db, 'posts', postId, 'comments', commentId, 'replies'), {
         content: replyInputs[commentId].trim(),
         authorId: user.uid,
@@ -229,7 +227,7 @@ const HomeScreen = () => {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50">
+    <div className="h-full overflow-y-auto bg-gradient-to-b from-blue-50 via-white to-gray-100">
       <div className="p-4 space-y-4">
         <CreatePost onPostCreated={() => console.log('Post created')} />
 
@@ -241,10 +239,10 @@ const HomeScreen = () => {
           posts.map((post) => (
             <div
               key={post.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
+              className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-200"
             >
               <div className="p-4 flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-md flex items-center justify-center">
                   <User size={20} className="text-white" />
                 </div>
                 <div className="flex-1">
@@ -268,20 +266,18 @@ const HomeScreen = () => {
               </div>
 
               <div className="px-4 pb-3">
-                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                  {post.content}
-                </p>
+                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{post.content}</p>
               </div>
 
-              <div className="px-4 py-3 border-t border-gray-50">
+              <div className="px-4 py-3 border-t border-gray-100">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
                       className={`flex items-center space-x-2 transition-colors ${
                         post.likes.includes(user?.uid || '')
-                          ? 'text-red-500'
-                          : 'text-gray-600 hover:text-red-500'
+                          ? 'text-rose-500'
+                          : 'text-gray-500 hover:text-rose-500'
                       }`}
                     >
                       <Heart
@@ -292,7 +288,7 @@ const HomeScreen = () => {
                     </button>
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-500 transition-colors"
+                      className="flex items-center space-x-2 text-gray-500 hover:text-indigo-500 transition-colors"
                     >
                       <MessageCircle size={18} />
                       <span className="text-sm font-medium">{post.comments.length}</span>
@@ -307,7 +303,7 @@ const HomeScreen = () => {
                     onChange={(e) =>
                       setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
                     }
-                    className="flex-1"
+                    className="flex-1 focus:ring-2 ring-indigo-500 shadow-sm"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -327,18 +323,15 @@ const HomeScreen = () => {
                 {showComments[post.id] && post.comments.length > 0 && (
                   <div className="space-y-3">
                     {post.comments.map((comment) => (
-                      <Card key={comment.id} className="bg-gray-50 border-0">
+                      <Card key={comment.id} className="bg-white/70 backdrop-blur-md border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition">
                         <CardContent className="p-3">
                           <div className="flex items-start space-x-2">
                             <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                               <User size={12} className="text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">
-                                {comment.authorName}
-                              </p>
+                              <p className="text-sm font-medium text-gray-900">{comment.authorName}</p>
                               <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
-                              
                               <div className="flex items-center space-x-2 mt-2">
                                 <button
                                   onClick={() => toggleReplies(comment.id)}
@@ -358,7 +351,7 @@ const HomeScreen = () => {
                                       onChange={(e) =>
                                         setReplyInputs((prev) => ({ ...prev, [comment.id]: e.target.value }))
                                       }
-                                      className="flex-1 text-sm"
+                                      className="flex-1 text-sm focus:ring-2 ring-blue-400"
                                       onKeyPress={(e) => {
                                         if (e.key === 'Enter') {
                                           e.preventDefault();
