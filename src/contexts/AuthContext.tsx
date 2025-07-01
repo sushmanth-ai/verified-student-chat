@@ -62,7 +62,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await signInWithPopup(auth, googleProvider);
       toast({ title: "Welcome!", description: "You've successfully signed in with Google." });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      console.error('Google sign-in error:', error);
+      if (error.code === 'auth/unauthorized-domain') {
+        toast({ 
+          title: "Domain Authorization Required", 
+          description: "Please add this domain to your Firebase authorized domains in the Firebase Console under Authentication > Settings > Authorized domains.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
       throw error;
     }
   };
