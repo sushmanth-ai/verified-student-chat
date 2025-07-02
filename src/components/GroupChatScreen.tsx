@@ -8,6 +8,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useToast } from '../hooks/use-toast';
 import CreateGroupModal from './CreateGroupModal';
+import GroupChat from './GroupChat';
 
 interface ChatGroup {
   id: string;
@@ -25,6 +26,7 @@ const GroupChatScreen = () => {
   const [myGroups, setMyGroups] = useState<ChatGroup[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -73,6 +75,12 @@ const GroupChatScreen = () => {
         title: "Joined group!", 
         description: `You joined ${groupName}` 
       });
+
+      // Auto-navigate to the group chat
+      const joinedGroup = allGroups.find(g => g.id === groupId);
+      if (joinedGroup) {
+        setSelectedGroup({ ...joinedGroup, members: [...joinedGroup.members, user.uid] });
+      }
     } catch (error) {
       console.error('Error joining group:', error);
       toast({ 
@@ -104,6 +112,16 @@ const GroupChatScreen = () => {
       });
     }
   };
+
+  // Show individual group chat if a group is selected
+  if (selectedGroup) {
+    return (
+      <GroupChat 
+        group={selectedGroup} 
+        onBack={() => setSelectedGroup(null)} 
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -231,14 +249,22 @@ const GroupChatScreen = () => {
                           </span>
                         </div>
                         
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => handleLeaveGroup(group.id, group.name)}
-                        >
-                          Leave Group
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setSelectedGroup(group)}
+                          >
+                            Open Chat
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleLeaveGroup(group.id, group.name)}
+                          >
+                            Leave
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -313,8 +339,13 @@ const GroupChatScreen = () => {
       <CreateGroupModal 
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        onGroupCreated={() => {
+        onGroupCreated={(groupId) => {
           setActiveTab('myGroups');
+          // Auto-navigate to the newly created group
+          const newGroup = allGroups.find(g => g.id === groupId);
+          if (newGroup) {
+            setSelectedGroup(newGroup);
+          }
         }}
       />
     </div>
