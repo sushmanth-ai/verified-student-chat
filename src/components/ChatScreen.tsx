@@ -25,6 +25,8 @@ interface Chat {
   lastMessage: string;
   lastMessageTime: any;
   unreadCount: number;
+  name?: string;
+  isGroup?: boolean;
 }
 
 const ChatScreen = () => {
