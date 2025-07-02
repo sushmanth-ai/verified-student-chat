@@ -6,6 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from './ui/dialog';
 
 interface CreateGroupModalProps {
   isOpen: boolean;
@@ -13,7 +20,11 @@ interface CreateGroupModalProps {
   onGroupCreated?: (groupId: string) => void;
 }
 
-const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, onGroupCreated }) => {
+const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onGroupCreated 
+}) => {
   const [groupName, setGroupName] = useState('');
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
@@ -34,7 +45,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
 
       toast({ 
         title: "Group created!", 
-        description: `${groupName} has been created successfully.` 
+        description: `"${groupName}" has been created successfully.` 
       });
 
       onGroupCreated?.(groupDoc.id);
@@ -58,23 +69,19 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-xl max-w-md w-full p-6 shadow-lg">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-foreground">Create New Group</h2>
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={loading}>
-            <X size={18} />
-          </Button>
-        </div>
-
-        {/* Form */}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New Group</DialogTitle>
+          <DialogDescription>
+            Create a new group to connect with other students on campus.
+          </DialogDescription>
+        </DialogHeader>
+        
         <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
               Group Name
             </label>
             <Input
@@ -84,13 +91,14 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
               onKeyPress={handleKeyPress}
               disabled={loading}
               maxLength={50}
+              autoFocus
             />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground">
               {groupName.length}/50 characters
             </p>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <Button 
               variant="outline" 
               onClick={onClose} 
@@ -108,8 +116,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

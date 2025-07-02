@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../components/LoginScreen';
 import HomeScreen from '../components/HomeScreen';
 import StoriesScreen from '../components/StoriesScreen';
-import ChatScreen from '../components/ChatScreen';
+import GroupChatScreen from '../components/GroupChatScreen';
 import EventsScreen from '../components/EventsScreen';
 import ProfileScreen from '../components/ProfileScreen';
 import { Button } from '../components/ui/button';
@@ -17,7 +17,7 @@ const AppContent = () => {
   const tabs = [
     { id: 'home', label: 'Home', icon: Home, component: HomeScreen },
     { id: 'stories', label: 'Stories', icon: Camera, component: StoriesScreen },
-    { id: 'chat', label: 'Chat', icon: MessageCircle, component: ChatScreen },
+    { id: 'chat', label: 'Chat', icon: MessageCircle, component: GroupChatScreen },
     { id: 'events', label: 'Events', icon: Calendar, component: EventsScreen },
     { id: 'profile', label: 'Profile', icon: User, component: ProfileScreen },
   ];
