@@ -205,12 +205,10 @@ const HomeScreen = () => {
     setShowReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
-  // Calculate trending posts based on engagement
+  // Calculate trending posts based on likes only
   const getTrendingPosts = () => {
     return [...posts].sort((a, b) => {
-      const engagementA = a.likes.length + a.comments.length;
-      const engagementB = b.likes.length + b.comments.length;
-      return engagementB - engagementA;
+      return b.likes.length - a.likes.length;
     });
   };
 
@@ -300,7 +298,7 @@ const HomeScreen = () => {
               {activeTab === 'trending' && index < 3 && (
                 <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 text-sm font-semibold flex items-center">
                   <TrendingUp size={16} className="mr-2" />
-                  #{index + 1} Trending
+                  #{index + 1} Trending • {post.likes.length} likes
                 </div>
               )}
 

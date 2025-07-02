@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { User, Calendar, MessageCircle, Heart, Settings, Edit, Trophy, Star } from 'lucide-react';
+import { User, Calendar, MessageCircle, Heart, Settings, Edit, Trophy, Star, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { useToast } from '../hooks/use-toast';
 
 interface Post {
   id: string;
@@ -14,9 +17,12 @@ interface Post {
 }
 
 const ProfileScreen = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const { toast } = useToast();
 
   const userStats = [
     { label: 'Posts', value: userPosts.length.toString(), icon: MessageCircle, color: 'from-blue-500 to-cyan-500' },
@@ -82,6 +88,38 @@ const ProfileScreen = () => {
     return user?.email || 'No email';
   };
 
+  const handleEditProfile = () => {
+    setShowEditProfile(true);
+    toast({ 
+      title: "Edit Profile", 
+      description: "Profile editing feature coming soon!" 
+    });
+  };
+
+  const handleSettings = () => {
+    setShowSettings(true);
+    toast({ 
+      title: "Settings", 
+      description: "Settings panel coming soon!" 
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({ 
+        title: "Logged out", 
+        description: "You have been successfully logged out." 
+      });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: "Failed to logout. Please try again.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -144,16 +182,32 @@ const ProfileScreen = () => {
 
       {/* Action Buttons */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 p-6 mx-4 shadow-lg">
-        <div className="grid grid-cols-2 gap-4">
-          <button className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl py-4 px-6 font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105">
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <Button 
+            onClick={handleEditProfile}
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl py-4 px-6 font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
             <Edit size={20} className="mr-2" />
             Edit Profile
-          </button>
-          <button className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-2xl py-4 px-6 font-semibold hover:from-gray-200 hover:to-gray-300 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105">
+          </Button>
+          <Button 
+            onClick={handleSettings}
+            className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-2xl py-4 px-6 font-semibold hover:from-gray-200 hover:to-gray-300 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
             <Settings size={20} className="mr-2" />
             Settings
-          </button>
+          </Button>
         </div>
+        
+        {/* Logout Button */}
+        <Button 
+          onClick={handleLogout}
+          variant="outline"
+          className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-2xl py-3 font-semibold transition-all duration-200"
+        >
+          <LogOut size={18} className="mr-2" />
+          Logout
+        </Button>
       </div>
 
       {/* Recent Activity */}
@@ -175,18 +229,20 @@ const ProfileScreen = () => {
         ) : (
           <div className="space-y-4">
             {userPosts.slice(0, 5).map((post) => (
-              <div key={post.id} className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border border-white/30 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]">
-                <p className="text-gray-800 mb-4 leading-relaxed">{post.content}</p>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2 bg-gradient-to-r from-pink-100 to-rose-100 px-3 py-1 rounded-full">
-                      <Heart size={16} className="text-pink-500" />
-                      <span className="text-pink-700 font-medium">{post.likes.length}</span>
+              <Card key={post.id} className="bg-white/90 backdrop-blur-sm rounded-2xl border border-white/30 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]">
+                <CardContent className="p-6">
+                  <p className="text-gray-800 mb-4 leading-relaxed">{post.content}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2 bg-gradient-to-r from-pink-100 to-rose-100 px-3 py-1 rounded-full">
+                        <Heart size={16} className="text-pink-500" />
+                        <span className="text-pink-700 font-medium">{post.likes.length}</span>
+                      </div>
                     </div>
+                    <span className="text-gray-500 font-medium">{getTimeAgo(post.createdAt)}</span>
                   </div>
-                  <span className="text-gray-500 font-medium">{getTimeAgo(post.createdAt)}</span>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
             {userPosts.length > 5 && (
               <div className="text-center">

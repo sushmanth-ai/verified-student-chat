@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Camera, X, Sparkles } from 'lucide-react';
+import { Camera, X, Sparkles, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -16,8 +16,21 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        setSelectedFile(file);
+        toast({ title: "Photo selected!", description: `${file.name} ready to upload` });
+      } else {
+        toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +38,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'posts'), {
+      const postData: any = {
         content: content.trim(),
         authorId: user.uid,
         authorName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
@@ -33,9 +46,18 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
         createdAt: serverTimestamp(),
         likes: [],
         comments: []
-      });
+      };
+
+      if (selectedFile) {
+        // In a real app, you would upload the file to storage first
+        postData.hasImage = true;
+        postData.imageName = selectedFile.name;
+      }
+
+      await addDoc(collection(db, 'posts'), postData);
 
       setContent('');
+      setSelectedFile(null);
       setIsExpanded(false);
       toast({ title: "Post created!", description: "Your post has been shared with the campus community." });
       onPostCreated?.();
@@ -82,6 +104,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
             onClick={() => {
               setIsExpanded(false);
               setContent('');
+              setSelectedFile(null);
             }}
             className="rounded-full hover:bg-red-50 hover:text-red-600"
           >
@@ -98,17 +121,44 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
             className="min-h-[120px] resize-none bg-white/80 border-gray-200/50 focus:ring-2 ring-blue-400/50 rounded-2xl text-lg leading-relaxed"
             maxLength={500}
           />
+
+          {selectedFile && (
+            <div className="bg-gradient-to-r from-green-50 to-teal-50 p-4 rounded-2xl border border-green-200/50">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center">
+                  <Camera size={20} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-green-800">{selectedFile.name}</p>
+                  <p className="text-sm text-green-600">Ready to upload</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedFile(null)}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm"
-                className="bg-gradient-to-r from-green-50 to-teal-50 hover:from-green-100 hover:to-teal-100 text-green-700 rounded-full px-4 py-2 border border-green-200/50"
-              >
-                <Camera size={18} className="mr-2" />
-                Photo
-              </Button>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <div className="bg-gradient-to-r from-green-50 to-teal-50 hover:from-green-100 hover:to-teal-100 text-green-700 rounded-full px-4 py-2 border border-green-200/50 flex items-center space-x-2 transition-all duration-200 hover:shadow-md">
+                  <Upload size={18} />
+                  <span className="font-medium">Upload Photo</span>
+                </div>
+              </label>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-500 font-medium">
                   {content.length}/500

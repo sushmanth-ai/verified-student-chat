@@ -18,8 +18,21 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
   const [content, setContent] = useState('');
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        setSelectedFile(file);
+        toast({ title: "Photo selected!", description: `${file.name} ready to upload` });
+      } else {
+        toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +40,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
 
     setLoading(true);
     try {
-      await addDoc(collection(db, 'stories'), {
+      const storyData: any = {
         content: content.trim(),
         caption: caption.trim(),
         authorId: user.uid,
@@ -36,10 +49,19 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
         createdAt: serverTimestamp(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
         views: []
-      });
+      };
+
+      if (selectedFile) {
+        // In a real app, you would upload the file to storage first
+        storyData.hasImage = true;
+        storyData.imageName = selectedFile.name;
+      }
+
+      await addDoc(collection(db, 'stories'), storyData);
 
       setContent('');
       setCaption('');
+      setSelectedFile(null);
       setIsOpen(false);
       toast({ title: "Story created!", description: "Your story has been shared and will be visible for 24 hours." });
       onStoryCreated?.();
@@ -81,6 +103,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
               setIsOpen(false);
               setContent('');
               setCaption('');
+              setSelectedFile(null);
             }}
             className="rounded-full hover:bg-red-50 hover:text-red-600"
           >
@@ -127,17 +150,43 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
             />
           </div>
 
+          {selectedFile && (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-2xl border border-purple-200/50">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <Camera size={20} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-purple-800">{selectedFile.name}</p>
+                  <p className="text-sm text-purple-600">Ready to upload</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedFile(null)}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                >
+                  <X size={16} />
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm"
-                className="bg-gradient-to-r from-green-50 to-teal-50 hover:from-green-100 hover:to-teal-100 text-green-700 rounded-full px-4 py-2 border border-green-200/50"
-              >
-                <Upload size={18} className="mr-2" />
-                Upload Photo
-              </Button>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <div className="bg-gradient-to-r from-green-50 to-teal-50 hover:from-green-100 hover:to-teal-100 text-green-700 rounded-full px-4 py-2 border border-green-200/50 flex items-center space-x-2 transition-all duration-200 hover:shadow-md">
+                  <Upload size={18} />
+                  <span className="font-medium">Upload Photo</span>
+                </div>
+              </label>
             </div>
             <Button 
               type="submit" 
