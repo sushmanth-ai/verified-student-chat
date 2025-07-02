@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Home, Camera, MessageCircle, Calendar, User } from 'lucide-react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
@@ -15,19 +14,19 @@ const AppContent = () => {
   const { user, loading, logout } = useAuth();
 
   const tabs = [
-    { id: 'home', label: 'Home', icon: Home, component: HomeScreen },
-    { id: 'stories', label: 'Stories', icon: Camera, component: StoriesScreen },
-    { id: 'chat', label: 'Chat', icon: MessageCircle, component: GroupChatScreen },
-    { id: 'events', label: 'Events', icon: Calendar, component: EventsScreen },
-    { id: 'profile', label: 'Profile', icon: User, component: ProfileScreen },
+    { id: 'home', label: 'Home', icon: Home, component: HomeScreen, color: 'from-blue-500 to-cyan-500' },
+    { id: 'stories', label: 'Stories', icon: Camera, component: StoriesScreen, color: 'from-purple-500 to-pink-500' },
+    { id: 'chat', label: 'Chat', icon: MessageCircle, component: GroupChatScreen, color: 'from-green-500 to-teal-500' },
+    { id: 'events', label: 'Events', icon: Calendar, component: EventsScreen, color: 'from-orange-500 to-red-500' },
+    { id: 'profile', label: 'Profile', icon: User, component: ProfileScreen, color: 'from-indigo-500 to-purple-500' },
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-transparent border-t-purple-500 border-r-blue-500 mx-auto mb-6"></div>
+          <p className="text-gray-600 font-medium text-lg">Loading...</p>
         </div>
       </div>
     );
@@ -38,20 +37,33 @@ const AppContent = () => {
   }
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || HomeScreen;
+  const activeTabData = tabs.find(tab => tab.id === activeTab);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto border-x border-gray-200">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex flex-col max-w-md mx-auto border-x border-gray-200/50 shadow-2xl">
       {/* Header */}
-      <div className="bg-white shadow-sm px-4 py-3 border-b border-gray-200">
+      <div className="bg-white/90 backdrop-blur-sm shadow-lg px-6 py-4 border-b border-gray-200/50">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-blue-600">CampusNet</h1>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-blue-600 font-semibold text-sm">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-lg">C</span>
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              CampusNet
+            </h1>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center ring-2 ring-white shadow-md">
+              <span className="text-blue-600 font-bold text-sm">
                 {user.displayName?.[0] || user.email?.[0]?.toUpperCase() || 'U'}
               </span>
             </div>
-            <Button variant="ghost" size="sm" onClick={logout}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={logout}
+              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl px-4 py-2 font-medium"
+            >
               Logout
             </Button>
           </div>
@@ -64,7 +76,7 @@ const AppContent = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="bg-white border-t border-gray-200 px-2 py-2">
+      <div className="bg-white/95 backdrop-blur-sm border-t border-gray-200/50 px-2 py-3 shadow-lg">
         <div className="flex justify-around">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -73,14 +85,17 @@ const AppContent = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all duration-200 ${
+                className={`flex flex-col items-center py-3 px-4 rounded-2xl transition-all duration-300 ${
                   isActive 
-                    ? 'text-blue-600 bg-blue-50' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ? `bg-gradient-to-br ${tab.color} text-white shadow-lg scale-110 transform` 
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100/80'
                 }`}
               >
-                <Icon size={20} className={`mb-1 ${isActive ? 'scale-110' : ''} transition-transform`} />
-                <span className="text-xs font-medium">{tab.label}</span>
+                <Icon size={22} className={`mb-1 ${isActive ? 'scale-110' : ''} transition-transform duration-200`} />
+                <span className={`text-xs font-semibold ${isActive ? 'text-white' : ''}`}>{tab.label}</span>
+                {isActive && (
+                  <div className="absolute -bottom-1 w-1 h-1 bg-white rounded-full"></div>
+                )}
               </button>
             );
           })}

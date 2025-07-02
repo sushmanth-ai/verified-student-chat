@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Trash2 } from 'lucide-react';
+import { User, Trash2, Eye, Clock, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, where, deleteDoc, doc } from 'firebase/firestore';
@@ -90,36 +90,49 @@ const StoriesScreen = () => {
 
   if (loading) {
     return (
-      <div className="h-full bg-gray-50 flex items-center justify-center">
+      <div className="h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading stories...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-purple-500 border-r-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading stories...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-gray-50">
+    <div className="h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Create Story Section */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 p-6 shadow-lg">
         <CreateStory onStoryCreated={() => {}} />
       </div>
 
       {/* Stories Grid */}
-      <div className="p-4">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Campus Stories</h2>
+      <div className="p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
+            <Sparkles size={20} className="text-white" />
+          </div>
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Campus Stories
+          </h2>
+        </div>
         
         {stories.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No active stories. Be the first to create one!</p>
+          <div className="text-center py-12">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
+              <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles size={32} className="text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">No active stories</h3>
+              <p className="text-gray-600">Be the first to create one!</p>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
             {stories.map((story) => (
               <div
                 key={story.id}
-                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-all cursor-pointer group relative"
+                className="bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 cursor-pointer group relative hover:scale-105"
               >
                 {/* Delete button for own stories */}
                 {story.authorId === user?.uid && (
@@ -130,32 +143,52 @@ const StoriesScreen = () => {
                       e.stopPropagation();
                       handleDeleteStory(story.id);
                     }}
-                    className="absolute top-2 right-2 z-10 bg-black bg-opacity-50 text-white hover:bg-opacity-70 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white hover:bg-red-500/80 opacity-0 group-hover:opacity-100 transition-all duration-200 rounded-full w-8 h-8 p-0"
                   >
                     <Trash2 size={14} />
                   </Button>
                 )}
 
                 {/* Story Preview */}
-                <div className="h-32 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 relative flex items-center justify-center p-3">
-                  <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-all"></div>
-                  <p className="text-white font-medium text-sm text-center relative z-10 line-clamp-3">
+                <div className="h-40 bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 relative flex items-center justify-center p-4 overflow-hidden">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="absolute top-0 left-0 w-20 h-20 bg-white rounded-full -translate-x-10 -translate-y-10"></div>
+                    <div className="absolute bottom-0 right-0 w-16 h-16 bg-white rounded-full translate-x-8 translate-y-8"></div>
+                    <div className="absolute top-1/2 left-1/2 w-12 h-12 bg-white rounded-full -translate-x-6 -translate-y-6"></div>
+                  </div>
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-all duration-200"></div>
+                  
+                  <p className="text-white font-semibold text-sm text-center relative z-10 line-clamp-4 leading-relaxed">
                     {story.content || story.caption}
                   </p>
                   
                   {/* User Avatar */}
-                  <div className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center border-2 border-white">
+                  <div className="absolute top-3 left-3 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white shadow-lg">
                     <User size={16} className="text-gray-700" />
+                  </div>
+
+                  {/* Time indicator */}
+                  <div className="absolute bottom-3 left-3 flex items-center space-x-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
+                    <Clock size={12} className="text-white" />
+                    <span className="text-white text-xs font-medium">{getTimeAgo(story.createdAt)}</span>
                   </div>
                 </div>
 
                 {/* Story Info */}
-                <div className="p-3">
-                  <h3 className="font-semibold text-gray-900 text-sm truncate">{story.authorName}</h3>
+                <div className="p-4 bg-gradient-to-r from-gray-50/80 to-blue-50/80">
+                  <h3 className="font-bold text-gray-900 text-sm truncate mb-1">{story.authorName}</h3>
                   {story.caption && story.content && (
-                    <p className="text-gray-600 text-xs truncate">{story.caption}</p>
+                    <p className="text-gray-600 text-xs truncate mb-2">{story.caption}</p>
                   )}
-                  <p className="text-gray-400 text-xs mt-1">{getTimeAgo(story.createdAt)}</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1 bg-purple-100 px-2 py-1 rounded-full">
+                      <Eye size={12} className="text-purple-600" />
+                      <span className="text-purple-700 text-xs font-medium">{story.views.length}</span>
+                    </div>
+                    <span className="text-gray-400 text-xs">{getTimeAgo(story.createdAt)}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -163,20 +196,34 @@ const StoriesScreen = () => {
         )}
 
         {/* Story Stats */}
-        <div className="mt-6 bg-white rounded-xl p-4 border border-gray-100">
-          <h3 className="font-semibold text-gray-900 mb-3">Today's Activity</h3>
-          <div className="flex justify-between text-center">
-            <div>
+        <div className="mt-8 bg-white/90 backdrop-blur-sm rounded-3xl p-6 border border-white/30 shadow-xl">
+          <h3 className="font-bold text-gray-900 mb-6 text-lg flex items-center">
+            <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center mr-2">
+              <Sparkles size={16} className="text-white" />
+            </div>
+            Today's Activity
+          </h3>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
+                <Sparkles size={24} className="text-white" />
+              </div>
               <div className="text-2xl font-bold text-blue-600">{stories.length}</div>
-              <div className="text-xs text-gray-500">Active Stories</div>
+              <div className="text-xs text-gray-500 font-medium">Active Stories</div>
             </div>
-            <div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
+                <User size={24} className="text-white" />
+              </div>
               <div className="text-2xl font-bold text-purple-600">{stories.filter(s => s.authorId === user?.uid).length}</div>
-              <div className="text-xs text-gray-500">Your Stories</div>
+              <div className="text-xs text-gray-500 font-medium">Your Stories</div>
             </div>
-            <div>
+            <div className="text-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
+                <Eye size={24} className="text-white" />
+              </div>
               <div className="text-2xl font-bold text-green-600">{stories.reduce((acc, story) => acc + story.views.length, 0)}</div>
-              <div className="text-xs text-gray-500">Total Views</div>
+              <div className="text-xs text-gray-500 font-medium">Total Views</div>
             </div>
           </div>
         </div>
