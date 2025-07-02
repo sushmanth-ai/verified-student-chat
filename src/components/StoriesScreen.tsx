@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Trash2, Eye, Clock, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, onSnapshot, where, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, where, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import CreateStory from './CreateStory';
 import { Button } from './ui/button';
@@ -73,6 +73,21 @@ const StoriesScreen = () => {
     }
   };
 
+  const handleViewStory = async (storyId: string) => {
+    if (!user) return;
+
+    const story = stories.find(s => s.id === storyId);
+    if (!story || story.views.includes(user.uid)) return;
+
+    try {
+      await updateDoc(doc(db, 'stories', storyId), {
+        views: arrayUnion(user.uid)
+      });
+    } catch (error) {
+      console.error('Error updating story views:', error);
+    }
+  };
+
   const getTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Just now';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -132,6 +147,7 @@ const StoriesScreen = () => {
             {stories.map((story) => (
               <div
                 key={story.id}
+                onClick={() => handleViewStory(story.id)}
                 className="bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 cursor-pointer group relative hover:scale-105"
               >
                 {/* Delete button for own stories */}
@@ -174,6 +190,11 @@ const StoriesScreen = () => {
                     <Clock size={12} className="text-white" />
                     <span className="text-white text-xs font-medium">{getTimeAgo(story.createdAt)}</span>
                   </div>
+
+                  {/* View indicator */}
+                  {story.views.includes(user?.uid || '') && (
+                    <div className="absolute top-3 right-12 bg-green-500 rounded-full w-3 h-3 border-2 border-white"></div>
+                  )}
                 </div>
 
                 {/* Story Info */}

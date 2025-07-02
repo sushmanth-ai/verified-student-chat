@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Users } from 'lucide-react';
+import { ArrowLeft, Send, Users, Smile, Paperclip } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { 
@@ -107,93 +107,166 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, onBack }) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const getMessageDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
   if (loading) {
     return (
-      <div className="h-full bg-background flex items-center justify-center">
+      <div className="h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-          <p className="text-muted-foreground">Loading messages...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-purple-500 border-r-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading messages...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-background flex flex-col">
+    <div className="h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex flex-col">
       {/* Header */}
-      <div className="bg-card border-b border-border p-4">
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft size={16} />
+      <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200/50 p-6 shadow-lg">
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onBack}
+            className="rounded-full hover:bg-gray-100 p-2"
+          >
+            <ArrowLeft size={20} />
           </Button>
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">{group.name}</h1>
-            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-              <Users size={12} />
-              <span>{group.members?.length || 0} members</span>
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
+                <Users size={24} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">{group.name}</h1>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <Users size={14} />
+                  <span className="font-medium">{group.members?.length || 0} members</span>
+                  <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                  <span>Active now</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users size={24} className="text-muted-foreground" />
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
+              <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users size={32} className="text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Start the conversation!</h3>
+              <p className="text-gray-600">Be the first to send a message in this group.</p>
             </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">Start the conversation!</h3>
-            <p className="text-muted-foreground">Be the first to send a message in this group.</p>
           </div>
         ) : (
-          messages.map((message) => {
-            const isOwnMessage = message.senderId === user?.uid;
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
-                    isOwnMessage
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-foreground'
-                  }`}
-                >
-                  {!isOwnMessage && (
-                    <p className="text-xs font-medium mb-1 opacity-70">
-                      {message.senderName}
-                    </p>
+          <>
+            {messages.map((message, index) => {
+              const isOwnMessage = message.senderId === user?.uid;
+              const showDate = index === 0 || getMessageDate(message.timestamp) !== getMessageDate(messages[index - 1]?.timestamp);
+              const showAvatar = !isOwnMessage && (index === 0 || messages[index - 1]?.senderId !== message.senderId);
+
+              return (
+                <div key={message.id}>
+                  {showDate && (
+                    <div className="flex justify-center my-6">
+                      <span className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-medium text-gray-600 shadow-md border border-white/30">
+                        {getMessageDate(message.timestamp)}
+                      </span>
+                    </div>
                   )}
-                  <p className="text-sm break-words">{message.text}</p>
-                  <p className={`text-xs mt-1 ${isOwnMessage ? 'opacity-70' : 'text-muted-foreground'}`}>
-                    {formatTime(message.timestamp)}
-                  </p>
+                  
+                  <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-2`}>
+                    <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                      {!isOwnMessage && showAvatar && (
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+                          <span className="text-white text-xs font-bold">
+                            {message.senderName[0]?.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      {!isOwnMessage && !showAvatar && (
+                        <div className="w-8 h-8 flex-shrink-0"></div>
+                      )}
+                      
+                      <div className={`relative px-4 py-3 rounded-2xl shadow-lg ${
+                        isOwnMessage
+                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
+                          : 'bg-white/90 backdrop-blur-sm text-gray-800 border border-white/30'
+                      }`}>
+                        {!isOwnMessage && showAvatar && (
+                          <p className="text-xs font-semibold mb-1 opacity-70">
+                            {message.senderName}
+                          </p>
+                        )}
+                        <p className="text-sm break-words leading-relaxed">{message.text}</p>
+                        <p className={`text-xs mt-2 ${
+                          isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          {formatTime(message.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Message Input */}
-      <div className="bg-card border-t border-border p-4">
-        <div className="flex space-x-2">
-          <Input
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="flex-1"
-          />
+      <div className="bg-white/90 backdrop-blur-sm border-t border-gray-200/50 p-6 shadow-lg">
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full hover:bg-gray-100 p-2"
+          >
+            <Paperclip size={20} className="text-gray-500" />
+          </Button>
+          <div className="flex-1 relative">
+            <Input
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="bg-white/80 border-gray-200/50 focus:ring-2 ring-blue-400/50 rounded-2xl pr-12 h-12 shadow-md"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full hover:bg-gray-100 p-2"
+            >
+              <Smile size={18} className="text-gray-500" />
+            </Button>
+          </div>
           <Button 
             onClick={handleSendMessage}
             disabled={!newMessage.trim()}
-            size="sm"
+            className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-12 h-12 p-0 shadow-lg disabled:opacity-50"
           >
-            <Send size={16} />
+            <Send size={20} />
           </Button>
         </div>
       </div>

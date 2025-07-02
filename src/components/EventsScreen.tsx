@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, User, Plus, X, MapPin, Clock, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -96,8 +96,25 @@ const EventsScreen = () => {
   const handleRSVP = async (eventId: string) => {
     if (!user) return;
     
-    // This would require updating the event document - simplified for now
-    toast({ title: "RSVP Confirmed!", description: "You've been added to the attendee list." });
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const isAttending = event.attendees.includes(user.uid);
+    const eventRef = doc(db, 'events', eventId);
+
+    try {
+      await updateDoc(eventRef, {
+        attendees: isAttending ? arrayRemove(user.uid) : arrayUnion(user.uid)
+      });
+
+      toast({ 
+        title: isAttending ? "RSVP Cancelled" : "RSVP Confirmed!", 
+        description: isAttending ? "You've been removed from the attendee list." : "You've been added to the attendee list." 
+      });
+    } catch (error) {
+      console.error('Error updating RSVP:', error);
+      toast({ title: "Error", description: "Failed to update RSVP", variant: "destructive" });
+    }
   };
 
   if (loading) {
@@ -347,7 +364,6 @@ const EventsScreen = () => {
                       variant="outline" 
                       size="sm"
                       onClick={() => handleRSVP(event.id)}
-                      disabled={event.attendees.includes(user?.uid || '')}
                       className={`rounded-xl px-6 py-2 font-semibold transition-all duration-200 ${
                         event.attendees.includes(user?.uid || '') 
                           ? 'bg-gradient-to-r from-green-500 to-teal-500 text-white border-none shadow-lg' 

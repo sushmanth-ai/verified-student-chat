@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, User, Trash2, Reply } from 'lucide-react';
+import { Heart, MessageCircle, User, Trash2, Reply, TrendingUp, Fire } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import {
@@ -58,6 +58,7 @@ const HomeScreen = () => {
   const [replyInputs, setReplyInputs] = useState<{ [commentId: string]: string }>({});
   const [showComments, setShowComments] = useState<{ [postId: string]: boolean }>({});
   const [showReplies, setShowReplies] = useState<{ [commentId: string]: boolean }>({});
+  const [activeTab, setActiveTab] = useState<'recent' | 'trending'>('recent');
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -204,6 +205,17 @@ const HomeScreen = () => {
     setShowReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
+  // Calculate trending posts based on engagement
+  const getTrendingPosts = () => {
+    return [...posts].sort((a, b) => {
+      const engagementA = a.likes.length + a.comments.length;
+      const engagementB = b.likes.length + b.comments.length;
+      return engagementB - engagementA;
+    });
+  };
+
+  const displayPosts = activeTab === 'trending' ? getTrendingPosts() : posts;
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
@@ -236,7 +248,39 @@ const HomeScreen = () => {
       <div className="p-4 space-y-6">
         <CreatePost onPostCreated={() => console.log('Post created')} />
 
-        {posts.length === 0 ? (
+        {/* Tab Navigation */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-white/30">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab('recent')}
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                activeTab === 'recent'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/80'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <MessageCircle size={18} />
+                <span>Recent</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('trending')}
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+                activeTab === 'trending'
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/80'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Fire size={18} />
+                <span>Trending</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {displayPosts.length === 0 ? (
           <div className="text-center py-12">
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -247,11 +291,19 @@ const HomeScreen = () => {
             </div>
           </div>
         ) : (
-          posts.map((post) => (
+          displayPosts.map((post, index) => (
             <div
               key={post.id}
               className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
             >
+              {/* Trending indicator */}
+              {activeTab === 'trending' && index < 3 && (
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 text-sm font-semibold flex items-center">
+                  <TrendingUp size={16} className="mr-2" />
+                  #{index + 1} Trending
+                </div>
+              )}
+
               {/* Post Header */}
               <div className="p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10">
                 <div className="flex items-center space-x-4">
@@ -312,7 +364,7 @@ const HomeScreen = () => {
                   </div>
                 </div>
 
-                {/* Comment Input */}
+                {/* Comment Input - Always visible */}
                 <div className="flex items-center space-x-3 mb-4">
                   <Input
                     placeholder="Write a comment..."
@@ -337,7 +389,7 @@ const HomeScreen = () => {
                   </Button>
                 </div>
 
-                {/* Comments */}
+                {/* Comments - Show when toggled */}
                 {showComments[post.id] && post.comments.length > 0 && (
                   <div className="space-y-3">
                     {post.comments.map((comment) => (
