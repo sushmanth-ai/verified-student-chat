@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Bell, Shield, Moon, Globe, Smartphone, Volume2, VolumeX } from 'lucide-react';
+import { X, Bell, Shield, Moon, Globe, Smartphone, Volume2, VolumeX, Eye, EyeOff, MessageSquare, Sun } from 'lucide-react';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { useToast } from '../hooks/use-toast';
@@ -36,7 +36,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     const savedSettings = localStorage.getItem('campusMediaSettings');
     if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
+      const parsedSettings = JSON.parse(savedSettings);
+      setSettings(parsedSettings);
+      
+      // Apply dark mode if enabled
+      if (parsedSettings.darkMode) {
+        document.documentElement.classList.add('dark');
+      }
     }
   }, []);
 
@@ -64,6 +70,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         break;
       case 'darkMode':
         document.documentElement.classList.toggle('dark', value);
+        // Apply dark mode styles to body
+        if (value) {
+          document.body.style.backgroundColor = '#1f2937';
+          document.body.style.color = '#f9fafb';
+        } else {
+          document.body.style.backgroundColor = '';
+          document.body.style.color = '';
+        }
         break;
       case 'soundNotifications':
         if (value) {
@@ -71,6 +85,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
           audio.volume = 0.3;
           audio.play().catch(() => {});
+        }
+        break;
+      case 'publicProfile':
+        // Simulate profile visibility change
+        if (!value) {
+          toast({
+            title: "Profile set to private",
+            description: "Your profile is now only visible to you."
+          });
+        } else {
+          toast({
+            title: "Profile set to public",
+            description: "Your profile is now visible to all users."
+          });
+        }
+        break;
+      case 'showOnlineStatus':
+        // Simulate online status change
+        if (!value) {
+          toast({
+            title: "Online status hidden",
+            description: "Other users won't see when you're online."
+          });
+        } else {
+          toast({
+            title: "Online status visible",
+            description: "Other users can see when you're online."
+          });
         }
         break;
     }
@@ -86,29 +128,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       title: "Notifications",
       icon: Bell,
       settings: [
-        { key: 'notifications', label: 'Enable Notifications', description: 'Receive notifications for new messages and activities' },
-        { key: 'emailNotifications', label: 'Email Notifications', description: 'Get notified via email for important updates' },
-        { key: 'pushNotifications', label: 'Push Notifications', description: 'Receive push notifications on your device' },
-        { key: 'soundNotifications', label: 'Sound Notifications', description: 'Play sounds for new notifications' }
+        { key: 'notifications', label: 'Enable Notifications', description: 'Receive notifications for new messages and activities', icon: Bell },
+        { key: 'emailNotifications', label: 'Email Notifications', description: 'Get notified via email for important updates', icon: Globe },
+        { key: 'pushNotifications', label: 'Push Notifications', description: 'Receive push notifications on your device', icon: Smartphone },
+        { key: 'soundNotifications', label: 'Sound Notifications', description: 'Play sounds for new notifications', icon: Volume2 }
       ]
     },
     {
       title: "Privacy",
       icon: Shield,
       settings: [
-        { key: 'publicProfile', label: 'Public Profile', description: 'Make your profile visible to other users' },
-        { key: 'showOnlineStatus', label: 'Show Online Status', description: 'Let others see when you\'re online' },
-        { key: 'allowDirectMessages', label: 'Allow Direct Messages', description: 'Allow other users to send you direct messages' },
-        { key: 'showReadReceipts', label: 'Read Receipts', description: 'Show when you\'ve read messages' }
+        { key: 'publicProfile', label: 'Public Profile', description: 'Make your profile visible to other users', icon: Eye },
+        { key: 'showOnlineStatus', label: 'Show Online Status', description: 'Let others see when you\'re online', icon: Eye },
+        { key: 'allowDirectMessages', label: 'Allow Direct Messages', description: 'Allow other users to send you direct messages', icon: MessageSquare },
+        { key: 'showReadReceipts', label: 'Read Receipts', description: 'Show when you\'ve read messages', icon: Eye }
       ]
     },
     {
       title: "Appearance & Performance",
       icon: Moon,
       settings: [
-        { key: 'darkMode', label: 'Dark Mode', description: 'Use dark theme for better viewing in low light' },
-        { key: 'autoPlayVideos', label: 'Auto-play Videos', description: 'Automatically play videos in posts' },
-        { key: 'dataCompression', label: 'Data Compression', description: 'Compress images and videos to save data' }
+        { key: 'darkMode', label: 'Dark Mode', description: 'Use dark theme for better viewing in low light', icon: Moon },
+        { key: 'autoPlayVideos', label: 'Auto-play Videos', description: 'Automatically play videos in posts', icon: Globe },
+        { key: 'dataCompression', label: 'Data Compression', description: 'Compress images and videos to save data', icon: Smartphone }
       ]
     }
   ];
@@ -128,6 +170,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       dataCompression: false
     };
     setSettings(defaultSettings);
+    document.documentElement.classList.remove('dark');
+    document.body.style.backgroundColor = '';
+    document.body.style.color = '';
     toast({
       title: "Settings reset",
       description: "All settings have been reset to default values."
@@ -136,48 +181,65 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <DialogTitle className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Settings
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Manage your account preferences and privacy settings.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {settingsGroups.map((group) => {
-            const Icon = group.icon;
+            const GroupIcon = group.icon;
             return (
-              <div key={group.title} className="space-y-4">
+              <div key={group.title} className="space-y-3 sm:space-y-4">
                 <div className="flex items-center space-x-3 pb-2 border-b border-gray-100">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
-                    <Icon size={16} className="text-blue-600" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center">
+                    <GroupIcon size={14} className="text-blue-600 sm:w-4 sm:h-4" />
                   </div>
-                  <h3 className="font-semibold text-gray-900">{group.title}</h3>
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{group.title}</h3>
                 </div>
                 
-                <div className="space-y-4">
-                  {group.settings.map((setting) => (
-                    <div key={setting.key} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 flex items-center">
-                          {setting.label}
-                          {setting.key === 'soundNotifications' && (
-                            settings.soundNotifications ? 
-                            <Volume2 size={16} className="ml-2 text-green-500" /> : 
-                            <VolumeX size={16} className="ml-2 text-gray-400" />
-                          )}
+                <div className="space-y-3">
+                  {group.settings.map((setting) => {
+                    const SettingIcon = setting.icon;
+                    return (
+                      <div key={setting.key} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors">
+                        <div className="flex-1 flex items-start space-x-3">
+                          <div className="w-6 h-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {setting.key === 'soundNotifications' ? (
+                              settings.soundNotifications ? 
+                              <Volume2 size={12} className="text-green-600" /> : 
+                              <VolumeX size={12} className="text-gray-400" />
+                            ) : setting.key === 'darkMode' ? (
+                              settings.darkMode ? 
+                              <Moon size={12} className="text-blue-600" /> : 
+                              <Sun size={12} className="text-yellow-600" />
+                            ) : setting.key === 'publicProfile' || setting.key === 'showOnlineStatus' ? (
+                              settings[setting.key as keyof typeof settings] ? 
+                              <Eye size={12} className="text-green-600" /> : 
+                              <EyeOff size={12} className="text-gray-400" />
+                            ) : (
+                              <SettingIcon size={12} className={
+                                settings[setting.key as keyof typeof settings] ? 'text-green-600' : 'text-gray-400'
+                              } />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 text-sm">{setting.label}</div>
+                            <div className="text-xs text-gray-500 leading-relaxed">{setting.description}</div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">{setting.description}</div>
+                        <Switch
+                          checked={settings[setting.key as keyof typeof settings]}
+                          onCheckedChange={(checked) => handleSettingChange(setting.key, checked)}
+                        />
                       </div>
-                      <Switch
-                        checked={settings[setting.key as keyof typeof settings]}
-                        onCheckedChange={(checked) => handleSettingChange(setting.key, checked)}
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -187,13 +249,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
             <Button 
               variant="outline"
               onClick={resetSettings}
-              className="w-full rounded-xl border-gray-300 hover:bg-gray-50"
+              className="w-full rounded-xl border-gray-300 hover:bg-gray-50 h-10 text-sm"
             >
               Reset to Default
             </Button>
             <Button 
               onClick={onClose}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl h-10 text-sm"
             >
               Done
             </Button>

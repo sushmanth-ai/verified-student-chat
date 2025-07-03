@@ -25,6 +25,7 @@ const ProfileScreen = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
+  const [settings, setSettings] = useState<any>({});
   const { toast } = useToast();
 
   const userStats = [
@@ -61,12 +62,26 @@ const ProfileScreen = () => {
     return unsubscribe;
   }, [user]);
 
-  // Load profile data from localStorage
+  // Load profile data and settings from localStorage
   useEffect(() => {
     const savedProfile = localStorage.getItem('campusMediaProfile');
+    const savedSettings = localStorage.getItem('campusMediaSettings');
+    
     if (savedProfile) {
       setProfileData(JSON.parse(savedProfile));
     }
+    
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
+    }
+    
+    // Listen for profile updates
+    const handleProfileUpdate = (event: any) => {
+      setProfileData(event.detail);
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
   }, [showEditProfile]); // Reload when edit modal closes
 
   const getTimeAgo = (timestamp: any) => {
@@ -117,6 +132,28 @@ const ProfileScreen = () => {
     ];
     const index = name.charCodeAt(0) % colors.length;
     return colors[index];
+  };
+
+  const getOnlineStatus = () => {
+    if (!settings.showOnlineStatus) return null;
+    return (
+      <div className="flex items-center space-x-2 mt-2">
+        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+        <span className="text-sm text-green-100 font-medium">Online</span>
+      </div>
+    );
+  };
+
+  const getProfileVisibility = () => {
+    if (!settings.publicProfile) {
+      return (
+        <div className="bg-yellow-100 border border-yellow-200 rounded-xl p-3 mt-4">
+          <p className="text-yellow-800 text-sm font-medium">🔒 Private Profile</p>
+          <p className="text-yellow-700 text-xs">Only you can see your profile</p>
+        </div>
+      );
+    }
+    return null;
   };
 
   const handleEditProfile = () => {
@@ -186,6 +223,9 @@ const ProfileScreen = () => {
           <p className="text-blue-100 mb-2 text-lg">@{getUserName().toLowerCase().replace(/\s+/g, '_')}</p>
           <p className="text-sm text-blue-100/80">{getUserEmail()}</p>
           
+          {/* Online Status */}
+          {getOnlineStatus()}
+          
           {/* Bio */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mt-6 border border-white/20">
             <p className="text-sm text-blue-50 leading-relaxed">
@@ -198,6 +238,9 @@ const ProfileScreen = () => {
               <p className="text-xs text-blue-100/80 mt-1">🌐 {profileData.website}</p>
             )}
           </div>
+          
+          {/* Profile Visibility Warning */}
+          {getProfileVisibility()}
         </div>
       </div>
 

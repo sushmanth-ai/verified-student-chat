@@ -62,6 +62,7 @@ const HomeScreen = () => {
   const [showComments, setShowComments] = useState<{ [postId: string]: boolean }>({});
   const [showReplies, setShowReplies] = useState<{ [commentId: string]: boolean }>({});
   const [activeTab, setActiveTab] = useState<'recent' | 'trending'>('recent');
+  const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -122,6 +123,36 @@ const HomeScreen = () => {
     return unsubscribe;
   }, [toast]);
 
+  // Listen for new posts and show notifications
+  useEffect(() => {
+    const settings = JSON.parse(localStorage.getItem('campusMediaSettings') || '{}');
+    
+    if (settings.notifications && posts.length > 0) {
+      const latestPost = posts[0];
+      const postTime = latestPost.createdAt?.toDate?.() || new Date(0);
+      const now = new Date();
+      const timeDiff = now.getTime() - postTime.getTime();
+      
+      // If post is less than 10 seconds old and not by current user
+      if (timeDiff < 10000 && latestPost.authorId !== user?.uid) {
+        // Show browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('New Post on CampusMedia', {
+            body: `${latestPost.authorName} shared: ${latestPost.content.substring(0, 50)}...`,
+            icon: '/favicon.ico'
+          });
+        }
+        
+        // Play sound if enabled
+        if (settings.soundNotifications) {
+          const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+          audio.volume = 0.3;
+          audio.play().catch(() => {});
+        }
+      }
+    }
+  }, [posts, user]);
+
   const getAvatarColor = (name: string) => {
     const colors = [
       'from-red-400 to-pink-500',
@@ -177,21 +208,55 @@ const HomeScreen = () => {
   };
 
   const handleLike = async (postId: string) => {
-    if (!user) return;
+    if (!user || likingPosts.has(postId)) return;
 
     const post = posts.find((p) => p.id === postId);
     if (!post) return;
 
     const isLiked = post.likes.includes(user.uid);
-    const postRef = doc(db, 'posts', postId);
+    
+    // Optimistic update
+    setLikingPosts(prev => new Set(prev).add(postId));
+    setPosts(prevPosts => 
+      prevPosts.map(p => 
+        p.id === postId 
+          ? { 
+              ...p, 
+              likes: isLiked 
+                ? p.likes.filter(uid => uid !== user.uid)
+                : [...p.likes, user.uid]
+            }
+          : p
+      )
+    );
 
     try {
+      const postRef = doc(db, 'posts', postId);
       await updateDoc(postRef, {
         likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
       });
     } catch (error) {
       console.error('Error updating like:', error);
+      // Revert optimistic update on error
+      setPosts(prevPosts => 
+        prevPosts.map(p => 
+          p.id === postId 
+            ? { 
+                ...p, 
+                likes: isLiked 
+                  ? [...p.likes, user.uid]
+                  : p.likes.filter(uid => uid !== user.uid)
+              }
+            : p
+        )
+      );
       toast({ title: 'Error', description: 'Failed to update like', variant: 'destructive' });
+    } finally {
+      setLikingPosts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(postId);
+        return newSet;
+      });
     }
   };
 
@@ -407,11 +472,12 @@ const HomeScreen = () => {
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
+                      disabled={likingPosts.has(post.id)}
                       className={`flex items-center space-x-2 transition-all duration-200 focus:outline-none focus:ring-0 ${
                         post.likes.includes(user?.uid || '')
                           ? 'text-rose-500 scale-110'
                           : 'text-gray-600 hover:text-rose-500 hover:scale-105'
-                      }`}
+                      } ${likingPosts.has(post.id) ? 'opacity-50' : ''}`}
                     >
                       <Heart
                         size={24}
