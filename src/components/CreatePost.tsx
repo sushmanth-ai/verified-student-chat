@@ -49,9 +49,15 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
       };
 
       if (selectedFile) {
-        // In a real app, you would upload the file to storage first
+        // Convert image to base64 for display
+        const reader = new FileReader();
+        const imageDataUrl = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(selectedFile);
+        });
         postData.hasImage = true;
         postData.imageName = selectedFile.name;
+        postData.imageData = imageDataUrl;
       }
 
       await addDoc(collection(db, 'posts'), postData);

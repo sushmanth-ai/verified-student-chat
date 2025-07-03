@@ -52,9 +52,15 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
       };
 
       if (selectedFile) {
-        // In a real app, you would upload the file to storage first
+        // Convert image to base64 for display
+        const reader = new FileReader();
+        const imageDataUrl = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(selectedFile);
+        });
         storyData.hasImage = true;
         storyData.imageName = selectedFile.name;
+        storyData.imageData = imageDataUrl;
       }
 
       await addDoc(collection(db, 'stories'), storyData);

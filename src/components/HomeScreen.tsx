@@ -48,6 +48,9 @@ interface Post {
   createdAt: any;
   likes: string[];
   comments: Comment[];
+  hasImage?: boolean;
+  imageName?: string;
+  imageData?: string;
 }
 
 const HomeScreen = () => {
@@ -332,6 +335,16 @@ const HomeScreen = () => {
               {/* Post Content */}
               <div className="px-6 pb-4">
                 <p className="text-gray-800 leading-relaxed whitespace-pre-wrap text-lg">{post.content}</p>
+                {/* Display image if available */}
+                {post.hasImage && post.imageData && (
+                  <div className="mt-4 rounded-2xl overflow-hidden shadow-lg">
+                    <img 
+                      src={post.imageData} 
+                      alt={post.imageName || 'Post image'} 
+                      className="w-full h-auto max-h-96 object-cover"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Post Actions */}
@@ -340,10 +353,10 @@ const HomeScreen = () => {
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-4 py-2 transition-all duration-200 ${
                         post.likes.includes(user?.uid || '')
-                          ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg scale-105'
-                          : 'bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-rose-100 hover:to-pink-100 hover:text-rose-600 shadow-md'
+                          ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg scale-105 rounded-lg'
+                          : 'bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-rose-100 hover:to-pink-100 hover:text-rose-600 shadow-md rounded-lg'
                       }`}
                     >
                       <Heart
@@ -354,7 +367,7 @@ const HomeScreen = () => {
                     </button>
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 hover:text-blue-600 transition-all duration-200 shadow-md"
+                      className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 hover:text-blue-600 transition-all duration-200 shadow-md"
                     >
                       <MessageCircle size={20} />
                       <span className="font-semibold">{post.comments.length}</span>
@@ -362,30 +375,32 @@ const HomeScreen = () => {
                   </div>
                 </div>
 
-                {/* Comment Input - Always visible */}
-                <div className="flex items-center space-x-3 mb-4">
-                  <Input
-                    placeholder="Write a comment..."
-                    value={commentInputs[post.id] || ''}
-                    onChange={(e) =>
-                      setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
-                    }
-                    className="flex-1 bg-white/80 border-gray-200/50 focus:ring-2 ring-blue-400/50 rounded-full shadow-sm"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleComment(post.id);
+                {/* Comment Input - Show when comments are toggled */}
+                {showComments[post.id] && (
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Input
+                      placeholder="Write a comment..."
+                      value={commentInputs[post.id] || ''}
+                      onChange={(e) =>
+                        setCommentInputs((prev) => ({ ...prev, [post.id]: e.target.value }))
                       }
-                    }}
-                  />
-                  <Button
-                    onClick={() => handleComment(post.id)}
-                    disabled={!commentInputs[post.id]?.trim()}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full px-6 shadow-lg"
-                  >
-                    Post
-                  </Button>
-                </div>
+                      className="flex-1 bg-white/80 border-gray-200/50 focus:ring-2 ring-blue-400/50 rounded-full shadow-sm"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleComment(post.id);
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={() => handleComment(post.id)}
+                      disabled={!commentInputs[post.id]?.trim()}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full px-6 shadow-lg"
+                    >
+                      Post
+                    </Button>
+                  </div>
+                )}
 
                 {/* Comments - Show when toggled */}
                 {showComments[post.id] && post.comments.length > 0 && (

@@ -41,8 +41,8 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex flex-col max-w-md mx-auto border-x border-gray-200/50 shadow-2xl">
-      {/* Header */}
-      <div className="bg-white/90 backdrop-blur-sm shadow-lg px-6 py-4 border-b border-gray-200/50">
+      {/* Header - Fixed at top */}
+      <div className="fixed top-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-sm shadow-lg px-6 py-4 border-b border-gray-200/50 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -71,12 +71,12 @@ const AppContent = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden pt-20 pb-20">
         <ActiveComponent />
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="bg-white/95 backdrop-blur-sm border-t border-gray-200/50 px-2 py-3 shadow-lg">
+      {/* Bottom Navigation - Fixed at bottom */}
+      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-sm border-t border-gray-200/50 px-2 py-3 shadow-lg z-50">
         <div className="flex justify-around">
           {tabs.map((tab) => {
             const Icon = tab.icon;

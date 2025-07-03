@@ -16,6 +16,9 @@ interface Story {
   createdAt: any;
   expiresAt: any;
   views: string[];
+  hasImage?: boolean;
+  imageName?: string;
+  imageData?: string;
 }
 
 const StoriesScreen = () => {
@@ -167,12 +170,23 @@ const StoriesScreen = () => {
 
                 {/* Story Preview */}
                 <div className="h-40 bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 relative flex items-center justify-center p-4 overflow-hidden">
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 opacity-20">
-                    <div className="absolute top-0 left-0 w-20 h-20 bg-white rounded-full -translate-x-10 -translate-y-10"></div>
-                    <div className="absolute bottom-0 right-0 w-16 h-16 bg-white rounded-full translate-x-8 translate-y-8"></div>
-                    <div className="absolute top-1/2 left-1/2 w-12 h-12 bg-white rounded-full -translate-x-6 -translate-y-6"></div>
-                  </div>
+                  {/* Display image if available, otherwise show gradient background */}
+                  {story.hasImage && story.imageData ? (
+                    <img 
+                      src={story.imageData} 
+                      alt={story.imageName || 'Story image'} 
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      {/* Background Pattern */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-0 left-0 w-20 h-20 bg-white rounded-full -translate-x-10 -translate-y-10"></div>
+                        <div className="absolute bottom-0 right-0 w-16 h-16 bg-white rounded-full translate-x-8 translate-y-8"></div>
+                        <div className="absolute top-1/2 left-1/2 w-12 h-12 bg-white rounded-full -translate-x-6 -translate-y-6"></div>
+                      </div>
+                    </>
+                  )}
                   
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-all duration-200"></div>
                   
