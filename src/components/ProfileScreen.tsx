@@ -6,6 +6,8 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { useToast } from '../hooks/use-toast';
+import EditProfileModal from './EditProfileModal';
+import SettingsModal from './SettingsModal';
 
 interface Post {
   id: string;
@@ -89,23 +91,11 @@ const ProfileScreen = () => {
   };
 
   const handleEditProfile = () => {
-    setShowEditProfile(!showEditProfile);
-    if (!showEditProfile) {
-      toast({ 
-        title: "Edit Profile", 
-        description: "Profile editing is now enabled!" 
-      });
-    }
+    setShowEditProfile(true);
   };
 
   const handleSettings = () => {
-    setShowSettings(!showSettings);
-    if (!showSettings) {
-      toast({ 
-        title: "Settings", 
-        description: "Settings panel is now open!" 
-      });
-    }
+    setShowSettings(true);
   };
 
   const handleLogout = async () => {
@@ -189,25 +179,17 @@ const ProfileScreen = () => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Button 
             onClick={handleEditProfile}
-            className={`rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 ${
-              showEditProfile 
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
-                : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700'
-            }`}
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Edit size={20} className="mr-2" />
-            {showEditProfile ? 'Profile Editing On' : 'Edit Profile'}
+            Edit Profile
           </Button>
           <Button 
             onClick={handleSettings}
-            className={`rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 ${
-              showSettings 
-                ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:from-purple-600 hover:to-violet-700' 
-                : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300'
-            }`}
+            className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
           >
             <Settings size={20} className="mr-2" />
-            {showSettings ? 'Settings Active' : 'Settings'}
+            Settings
           </Button>
         </div>
         
@@ -251,7 +233,9 @@ const ProfileScreen = () => {
                         <span className="text-pink-700 font-medium">{post.likes.length}</span>
                       </div>
                     </div>
-                    <span className="text-gray-500 font-medium">{getTimeAgo(post.createdAt)}</span>
+                    <span className="text-gray-500 font-medium bg-gray-100 px-3 py-1 rounded-full text-xs">
+                      {getTimeAgo(post.createdAt)}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -265,29 +249,17 @@ const ProfileScreen = () => {
             )}
           </div>
         )}
-
-        {/* Campus Info */}
-        <div className="mt-8 bg-white/90 backdrop-blur-sm rounded-3xl p-6 border border-white/30 shadow-xl">
-          <h4 className="font-bold text-gray-900 mb-6 flex items-center text-lg">
-            <Star className="mr-2 text-yellow-500" size={24} />
-            Campus Involvement
-          </h4>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border border-blue-100">
-              <span className="text-gray-700 font-medium">CS Student Association</span>
-              <span className="text-xs text-blue-700 bg-blue-200 px-3 py-1 rounded-full font-semibold">Member</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl border border-purple-100">
-              <span className="text-gray-700 font-medium">Tech Entrepreneurship Club</span>
-              <span className="text-xs text-purple-700 bg-purple-200 px-3 py-1 rounded-full font-semibold">Officer</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-2xl border border-green-100">
-              <span className="text-gray-700 font-medium">Intramural Soccer</span>
-              <span className="text-xs text-green-700 bg-green-200 px-3 py-1 rounded-full font-semibold">Player</span>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* Modals */}
+      <EditProfileModal 
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+      />
+      <SettingsModal 
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 };

@@ -48,8 +48,11 @@ const AppContent = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-lg">C</span>
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              CampusNet
+            <h1 className="text-2xl font-bold">
+              <span className="text-gray-800">campu</span>
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">S</span>
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">M</span>
+              <span className="text-gray-800">edia</span>
             </h1>
           </div>
           <div className="flex items-center space-x-3">

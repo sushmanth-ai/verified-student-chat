@@ -208,11 +208,58 @@ const HomeScreen = () => {
     setShowReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
-  // Calculate trending posts based on likes only
-  const getTrendingPosts = () => {
-    return [...posts].sort((a, b) => {
-      return b.likes.length - a.likes.length;
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'from-red-400 to-pink-500',
+      'from-blue-400 to-indigo-500',
+      'from-green-400 to-teal-500',
+      'from-yellow-400 to-orange-500',
+      'from-purple-400 to-violet-500',
+      'from-pink-400 to-rose-500',
+      'from-indigo-400 to-blue-500',
+      'from-teal-400 to-cyan-500'
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return 'Just now';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
+  };
+
+  // Calculate trending posts based on likes from today only
+  const getTrendingPosts = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todaysPosts = posts.filter(post => {
+      const postDate = post.createdAt?.toDate?.() || new Date(0);
+      return postDate >= today;
+    });
+
+    return todaysPosts
+      .filter(post => post.likes.length > 0)
+      .sort((a, b) => b.likes.length - a.likes.length)
+      .slice(0, 1); // Only show #1 trending post
   };
 
   const displayPosts = activeTab === 'trending' ? getTrendingPosts() : posts;
@@ -287,8 +334,15 @@ const HomeScreen = () => {
               <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageCircle size={32} className="text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">No posts yet</h3>
-              <p className="text-gray-600">Be the first to share something with the campus community!</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                {activeTab === 'trending' ? 'No trending posts today' : 'No posts yet'}
+              </h3>
+              <p className="text-gray-600">
+                {activeTab === 'trending' 
+                  ? 'Check back later for trending content!' 
+                  : 'Be the first to share something with the campus community!'
+                }
+              </p>
             </div>
           </div>
         ) : (
@@ -298,25 +352,25 @@ const HomeScreen = () => {
               className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
             >
               {/* Trending indicator */}
-              {activeTab === 'trending' && index < 3 && (
+              {activeTab === 'trending' && (
                 <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 text-sm font-semibold flex items-center">
                   <TrendingUp size={16} className="mr-2" />
-                  #{index + 1} Trending • {post.likes.length} likes
+                  #1 Trending Today • {post.likes.length} likes
                 </div>
               )}
 
               {/* Post Header */}
               <div className="p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full shadow-lg flex items-center justify-center ring-4 ring-white/50">
-                    <User size={24} className="text-white" />
+                  <div className={`w-12 h-12 bg-gradient-to-br ${getAvatarColor(post.authorName)} rounded-full shadow-lg flex items-center justify-center ring-4 ring-white/50`}>
+                    <span className="text-white font-bold text-lg">
+                      {post.authorName[0]?.toUpperCase()}
+                    </span>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-900 text-lg">{post.authorName}</h3>
-                    <p className="text-sm text-gray-600">
-                      {post.createdAt?.toDate
-                        ? post.createdAt.toDate().toLocaleString()
-                        : 'Just now'}
+                    <p className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block font-medium">
+                      {formatTimestamp(post.createdAt)}
                     </p>
                   </div>
                   {post.authorId === user?.uid && (
@@ -353,24 +407,29 @@ const HomeScreen = () => {
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 px-4 py-2 transition-all duration-100 ${
+                      className={`flex items-center space-x-2 transition-all duration-200 ${
                         post.likes.includes(user?.uid || '')
-                          ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg scale-105'
-                          : 'bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-rose-100 hover:to-pink-100 hover:text-rose-600 shadow-md'
+                          ? 'text-rose-500 scale-110'
+                          : 'text-gray-600 hover:text-rose-500 hover:scale-105'
                       }`}
                     >
                       <Heart
-                        size={20}
+                        size={24}
                         fill={post.likes.includes(user?.uid || '') ? 'currentColor' : 'none'}
+                        className="transition-all duration-200"
                       />
-                      <span className="font-semibold">{post.likes.length}</span>
+                      <span className="font-semibold text-sm bg-gray-100 px-2 py-1 rounded-full">
+                        {post.likes.length}
+                      </span>
                     </button>
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-blue-100 hover:to-indigo-100 hover:text-blue-600 transition-all duration-200 shadow-md"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-105"
                     >
                       <MessageCircle size={20} />
-                      <span className="font-semibold">{post.comments.length}</span>
+                      <span className="font-semibold text-sm bg-gray-100 px-2 py-1 rounded-full">
+                        {post.comments.length}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -409,8 +468,10 @@ const HomeScreen = () => {
                       <Card key={comment.id} className="bg-white/90 backdrop-blur-sm border border-white/30 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
                         <CardContent className="p-4">
                           <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-                              <User size={16} className="text-white" />
+                            <div className={`w-8 h-8 bg-gradient-to-br ${getAvatarColor(comment.authorName)} rounded-full flex items-center justify-center flex-shrink-0 shadow-md`}>
+                              <span className="text-white text-sm font-bold">
+                                {comment.authorName[0]?.toUpperCase()}
+                              </span>
                             </div>
                             <div className="flex-1">
                               <p className="text-sm font-semibold text-gray-900 mb-1">{comment.authorName}</p>
@@ -423,6 +484,9 @@ const HomeScreen = () => {
                                   <Reply size={12} />
                                   <span>Reply</span>
                                 </button>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                  {formatTimestamp(comment.createdAt)}
+                                </span>
                               </div>
 
                               {showReplies[comment.id] && (

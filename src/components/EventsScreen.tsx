@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, User, Plus, X, MapPin, Clock, Users } from 'lucide-react';
+import { Calendar, User, Plus, X, MapPin, Clock, Users, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, updateDoc, arrayUnion, arrayRemove, deleteDoc } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -90,6 +90,26 @@ const EventsScreen = () => {
     } catch (error) {
       console.error('Error creating event:', error);
       toast({ title: "Error", description: "Failed to create event", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (!user) return;
+
+    const event = events.find(e => e.id === eventId);
+    if (!event || event.authorId !== user.uid) {
+      toast({ title: "Error", description: "You can only delete your own events", variant: "destructive" });
+      return;
+    }
+
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      try {
+        await deleteDoc(doc(db, 'events', eventId));
+        toast({ title: "Event deleted", description: "Your event has been removed." });
+      } catch (error) {
+        console.error('Error deleting event:', error);
+        toast({ title: "Error", description: "Failed to delete event", variant: "destructive" });
+      }
     }
   };
 
@@ -327,19 +347,37 @@ const EventsScreen = () => {
                 {/* Event Info */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4">
                   <div className="flex-1 mb-4 sm:mb-0">
-                    <h3 className="font-bold text-gray-900 text-lg sm:text-xl mb-3">{event.title}</h3>
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-bold text-gray-900 text-lg sm:text-xl">{event.title}</h3>
+                      {event.authorId === user?.uid && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full ml-2"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
                     <div className="space-y-2">
                       <div className="flex items-center space-x-3 text-gray-600">
                         <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Clock size={16} className="text-blue-600" />
                         </div>
-                        <span className="font-medium text-sm sm:text-base">{event.date} at {event.time}</span>
+                        <span className="font-medium text-sm sm:text-base bg-blue-50 px-3 py-1 rounded-full">
+                          {new Date(event.date).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })} at {event.time}
+                        </span>
                       </div>
                       <div className="flex items-center space-x-3 text-gray-600">
                         <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center flex-shrink-0">
                           <MapPin size={16} className="text-green-600" />
                         </div>
-                        <span className="font-medium text-sm sm:text-base">{event.location}</span>
+                        <span className="font-medium text-sm sm:text-base bg-green-50 px-3 py-1 rounded-full">{event.location}</span>
                       </div>
                     </div>
                     {event.description && (
@@ -358,7 +396,9 @@ const EventsScreen = () => {
                       <Users size={16} className="text-purple-600" />
                       <span className="text-purple-700 font-semibold text-sm">{event.attendees.length} attending</span>
                     </div>
-                    <span className="text-xs sm:text-sm text-gray-500">by {event.authorName}</span>
+                    <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      by {event.authorName}
+                    </span>
                   </div>
                   <div className="flex space-x-2 sm:space-x-3">
                     <Button 
