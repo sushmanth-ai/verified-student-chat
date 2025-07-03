@@ -89,19 +89,23 @@ const ProfileScreen = () => {
   };
 
   const handleEditProfile = () => {
-    setShowEditProfile(true);
-    toast({ 
-      title: "Edit Profile", 
-      description: "Profile editing feature coming soon!" 
-    });
+    setShowEditProfile(!showEditProfile);
+    if (!showEditProfile) {
+      toast({ 
+        title: "Edit Profile", 
+        description: "Profile editing is now enabled!" 
+      });
+    }
   };
 
   const handleSettings = () => {
-    setShowSettings(true);
-    toast({ 
-      title: "Settings", 
-      description: "Settings panel coming soon!" 
-    });
+    setShowSettings(!showSettings);
+    if (!showSettings) {
+      toast({ 
+        title: "Settings", 
+        description: "Settings panel is now open!" 
+      });
+    }
   };
 
   const handleLogout = async () => {
@@ -185,17 +189,25 @@ const ProfileScreen = () => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Button 
             onClick={handleEditProfile}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl py-4 px-6 font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+            className={`rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 ${
+              showEditProfile 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700' 
+                : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700'
+            }`}
           >
             <Edit size={20} className="mr-2" />
-            Edit Profile
+            {showEditProfile ? 'Profile Editing On' : 'Edit Profile'}
           </Button>
           <Button 
             onClick={handleSettings}
-            className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-2xl py-4 px-6 font-semibold hover:from-gray-200 hover:to-gray-300 transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+            className={`rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 ${
+              showSettings 
+                ? 'bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:from-purple-600 hover:to-violet-700' 
+                : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300'
+            }`}
           >
             <Settings size={20} className="mr-2" />
-            Settings
+            {showSettings ? 'Settings Active' : 'Settings'}
           </Button>
         </div>
         

@@ -353,10 +353,10 @@ const HomeScreen = () => {
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 px-4 py-2 transition-all duration-200 ${
+                      className={`flex items-center space-x-2 px-4 py-2 transition-all duration-100 ${
                         post.likes.includes(user?.uid || '')
-                          ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg scale-105 rounded-lg'
-                          : 'bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-rose-100 hover:to-pink-100 hover:text-rose-600 shadow-md rounded-lg'
+                          ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg scale-105'
+                          : 'bg-white/70 text-gray-600 hover:bg-gradient-to-r hover:from-rose-100 hover:to-pink-100 hover:text-rose-600 shadow-md'
                       }`}
                     >
                       <Heart

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Send, Users, Smile, Paperclip } from 'lucide-react';
+import { ArrowLeft, Send, Users, Smile, Paperclip, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase';
 import { 
@@ -10,7 +10,8 @@ import {
   onSnapshot, 
   serverTimestamp,
   doc,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -36,9 +37,10 @@ interface ChatGroup {
 interface GroupChatProps {
   group: ChatGroup;
   onBack: () => void;
+  onGroupDeleted?: () => void;
 }
 
-const GroupChat: React.FC<GroupChatProps> = ({ group, onBack }) => {
+const GroupChat: React.FC<GroupChatProps> = ({ group, onBack, onGroupDeleted }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,36 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, onBack }) => {
         description: "Failed to send message. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!user || !group || group.createdBy !== user.uid) {
+      toast({
+        title: "Error",
+        description: "Only the group creator can delete this group.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone.`)) {
+      try {
+        await deleteDoc(doc(db, 'chatGroups', group.id));
+        toast({
+          title: "Group deleted",
+          description: "The group has been successfully deleted."
+        });
+        onGroupDeleted?.(); // Call the deletion callback
+        onBack(); // Go back to group list
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete group. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -163,6 +195,16 @@ const GroupChat: React.FC<GroupChatProps> = ({ group, onBack }) => {
               </div>
             </div>
           </div>
+          {group.createdBy === user?.uid && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteGroup}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+            >
+              <Trash2 size={18} />
+            </Button>
+          )}
         </div>
       </div>
 

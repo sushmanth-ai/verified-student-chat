@@ -82,6 +82,9 @@ const GroupChatScreen = () => {
       if (joinedGroup) {
         setSelectedGroup({ ...joinedGroup, members: [...joinedGroup.members, user.uid] });
       }
+      
+      // Switch to myGroups tab after joining
+      setActiveTab('myGroups');
     } catch (error) {
       console.error('Error joining group:', error);
       toast({ 
@@ -119,7 +122,11 @@ const GroupChatScreen = () => {
     return (
       <GroupChat 
         group={selectedGroup} 
-        onBack={() => setSelectedGroup(null)} 
+        onBack={() => setSelectedGroup(null)}
+        onGroupDeleted={() => {
+          setSelectedGroup(null);
+          setActiveTab('discover');
+        }}
       />
     );
   }
