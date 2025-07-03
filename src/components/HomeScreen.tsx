@@ -122,6 +122,60 @@ const HomeScreen = () => {
     return unsubscribe;
   }, [toast]);
 
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'from-red-400 to-pink-500',
+      'from-blue-400 to-indigo-500',
+      'from-green-400 to-teal-500',
+      'from-yellow-400 to-orange-500',
+      'from-purple-400 to-violet-500',
+      'from-pink-400 to-rose-500',
+      'from-indigo-400 to-blue-500',
+      'from-teal-400 to-cyan-500'
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return 'Just now';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d`;
+    
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  };
+
+  // Calculate trending posts based on likes from today only
+  const getTrendingPosts = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todaysPosts = posts.filter(post => {
+      const postDate = post.createdAt?.toDate?.() || new Date(0);
+      return postDate >= today;
+    });
+
+    return todaysPosts
+      .filter(post => post.likes.length > 0)
+      .sort((a, b) => b.likes.length - a.likes.length)
+      .slice(0, 1); // Only show #1 trending post
+  };
+
   const handleLike = async (postId: string) => {
     if (!user) return;
 
@@ -208,60 +262,6 @@ const HomeScreen = () => {
     setShowReplies((prev) => ({ ...prev, [commentId]: !prev[commentId] }));
   };
 
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      'from-red-400 to-pink-500',
-      'from-blue-400 to-indigo-500',
-      'from-green-400 to-teal-500',
-      'from-yellow-400 to-orange-500',
-      'from-purple-400 to-violet-500',
-      'from-pink-400 to-rose-500',
-      'from-indigo-400 to-blue-500',
-      'from-teal-400 to-cyan-500'
-    ];
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
-  };
-
-  const formatTimestamp = (timestamp: any) => {
-    if (!timestamp) return 'Just now';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m`;
-    
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
-    
-    const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
-  };
-
-  // Calculate trending posts based on likes from today only
-  const getTrendingPosts = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todaysPosts = posts.filter(post => {
-      const postDate = post.createdAt?.toDate?.() || new Date(0);
-      return postDate >= today;
-    });
-
-    return todaysPosts
-      .filter(post => post.likes.length > 0)
-      .sort((a, b) => b.likes.length - a.likes.length)
-      .slice(0, 1); // Only show #1 trending post
-  };
-
   const displayPosts = activeTab === 'trending' ? getTrendingPosts() : posts;
 
   if (loading) {
@@ -301,7 +301,7 @@ const HomeScreen = () => {
           <div className="flex">
             <button
               onClick={() => setActiveTab('recent')}
-              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-0 ${
                 activeTab === 'recent'
                   ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/80'
@@ -314,7 +314,7 @@ const HomeScreen = () => {
             </button>
             <button
               onClick={() => setActiveTab('trending')}
-              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
+              className={`flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-0 ${
                 activeTab === 'trending'
                   ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/80'
@@ -378,7 +378,7 @@ const HomeScreen = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeletePost(post.id)}
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full focus:outline-none focus:ring-0"
                     >
                       <Trash2 size={18} />
                     </Button>
@@ -407,7 +407,7 @@ const HomeScreen = () => {
                   <div className="flex items-center space-x-6">
                     <button
                       onClick={() => handleLike(post.id)}
-                      className={`flex items-center space-x-2 transition-all duration-200 ${
+                      className={`flex items-center space-x-2 transition-all duration-200 focus:outline-none focus:ring-0 ${
                         post.likes.includes(user?.uid || '')
                           ? 'text-rose-500 scale-110'
                           : 'text-gray-600 hover:text-rose-500 hover:scale-105'
@@ -424,7 +424,7 @@ const HomeScreen = () => {
                     </button>
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-105"
+                      className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-0"
                     >
                       <MessageCircle size={20} />
                       <span className="font-semibold text-sm bg-gray-100 px-2 py-1 rounded-full">
@@ -454,7 +454,7 @@ const HomeScreen = () => {
                     <Button
                       onClick={() => handleComment(post.id)}
                       disabled={!commentInputs[post.id]?.trim()}
-                      className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full px-6 shadow-lg"
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full px-6 shadow-lg focus:outline-none focus:ring-0"
                     >
                       Post
                     </Button>
@@ -479,7 +479,7 @@ const HomeScreen = () => {
                               <div className="flex items-center space-x-3 mt-3">
                                 <button
                                   onClick={() => toggleReplies(comment.id)}
-                                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1 px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors"
+                                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center space-x-1 px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors focus:outline-none focus:ring-0"
                                 >
                                   <Reply size={12} />
                                   <span>Reply</span>
@@ -510,7 +510,7 @@ const HomeScreen = () => {
                                       size="sm"
                                       onClick={() => handleReply(post.id, comment.id)}
                                       disabled={!replyInputs[comment.id]?.trim()}
-                                      className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-full shadow-md"
+                                      className="bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white rounded-full shadow-md focus:outline-none focus:ring-0"
                                     >
                                       Reply
                                     </Button>

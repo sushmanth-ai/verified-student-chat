@@ -24,6 +24,7 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
   const { toast } = useToast();
 
   const userStats = [
@@ -60,6 +61,14 @@ const ProfileScreen = () => {
     return unsubscribe;
   }, [user]);
 
+  // Load profile data from localStorage
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('campusMediaProfile');
+    if (savedProfile) {
+      setProfileData(JSON.parse(savedProfile));
+    }
+  }, [showEditProfile]); // Reload when edit modal closes
+
   const getTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Just now';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -76,18 +85,38 @@ const ProfileScreen = () => {
   };
 
   const getUserInitials = () => {
-    if (user?.displayName) {
-      return user.displayName.split(' ').map(name => name[0]).join('').toUpperCase();
+    const displayName = profileData?.displayName || user?.displayName;
+    if (displayName) {
+      return displayName.split(' ').map((name: string) => name[0]).join('').toUpperCase();
     }
     return user?.email?.[0]?.toUpperCase() || 'U';
   };
 
   const getUserName = () => {
-    return user?.displayName || user?.email?.split('@')[0] || 'Anonymous User';
+    return profileData?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Anonymous User';
   };
 
   const getUserEmail = () => {
     return user?.email || 'No email';
+  };
+
+  const getUserBio = () => {
+    return profileData?.bio || '🎓 Campus community member • Connecting with fellow students 🚀';
+  };
+
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'from-red-400 to-pink-500',
+      'from-blue-400 to-indigo-500',
+      'from-green-400 to-teal-500',
+      'from-yellow-400 to-orange-500',
+      'from-purple-400 to-violet-500',
+      'from-pink-400 to-rose-500',
+      'from-indigo-400 to-blue-500',
+      'from-teal-400 to-cyan-500'
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
   };
 
   const handleEditProfile = () => {
@@ -138,8 +167,18 @@ const ProfileScreen = () => {
         
         <div className="text-center relative z-10">
           {/* Profile Picture */}
-          <div className="w-28 h-28 bg-white/20 backdrop-blur-sm rounded-full mx-auto mb-6 flex items-center justify-center ring-4 ring-white/30 shadow-2xl">
-            <span className="text-4xl font-bold text-white">{getUserInitials()}</span>
+          <div className="w-28 h-28 mx-auto mb-6 flex items-center justify-center ring-4 ring-white/30 shadow-2xl rounded-full overflow-hidden">
+            {profileData?.profileImage ? (
+              <img 
+                src={profileData.profileImage} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(getUserName())} flex items-center justify-center`}>
+                <span className="text-4xl font-bold text-white">{getUserInitials()}</span>
+              </div>
+            )}
           </div>
           
           {/* User Info */}
@@ -150,8 +189,14 @@ const ProfileScreen = () => {
           {/* Bio */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mt-6 border border-white/20">
             <p className="text-sm text-blue-50 leading-relaxed">
-              🎓 Campus community member • Connecting with fellow students 🚀
+              {getUserBio()}
             </p>
+            {profileData?.location && (
+              <p className="text-xs text-blue-100/80 mt-2">📍 {profileData.location}</p>
+            )}
+            {profileData?.website && (
+              <p className="text-xs text-blue-100/80 mt-1">🌐 {profileData.website}</p>
+            )}
           </div>
         </div>
       </div>
@@ -179,14 +224,14 @@ const ProfileScreen = () => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           <Button 
             onClick={handleEditProfile}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-0"
           >
             <Edit size={20} className="mr-2" />
             Edit Profile
           </Button>
           <Button 
             onClick={handleSettings}
-            className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 rounded-2xl py-4 px-6 font-semibold transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-0"
           >
             <Settings size={20} className="mr-2" />
             Settings
@@ -197,7 +242,7 @@ const ProfileScreen = () => {
         <Button 
           onClick={handleLogout}
           variant="outline"
-          className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-2xl py-3 font-semibold transition-all duration-200"
+          className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-2xl py-3 font-semibold transition-all duration-200 focus:outline-none focus:ring-0"
         >
           <LogOut size={18} className="mr-2" />
           Logout
@@ -242,7 +287,7 @@ const ProfileScreen = () => {
             ))}
             {userPosts.length > 5 && (
               <div className="text-center">
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-semibold bg-blue-50 hover:bg-blue-100 px-6 py-3 rounded-full transition-colors">
+                <button className="text-blue-600 hover:text-blue-800 text-sm font-semibold bg-blue-50 hover:bg-blue-100 px-6 py-3 rounded-full transition-colors focus:outline-none focus:ring-0">
                   View all {userPosts.length} posts
                 </button>
               </div>

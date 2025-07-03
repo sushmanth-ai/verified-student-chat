@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Camera } from 'lucide-react';
+import { X, User, Mail, Camera, Upload } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -22,6 +22,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     displayName: user?.displayName || '',
     bio: '🎓 Campus community member • Connecting with fellow students 🚀',
@@ -29,11 +30,42 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
     website: ''
   });
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          setProfileImage(reader.result as string);
+          toast({
+            title: "Photo selected!",
+            description: "Your new profile photo is ready to save."
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast({
+          title: "Invalid file",
+          description: "Please select an image file",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Save profile data to localStorage for persistence
+      const profileData = {
+        ...formData,
+        profileImage,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('campusMediaProfile', JSON.stringify(profileData));
       
       toast({
         title: "Profile updated!",
@@ -51,6 +83,36 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
     }
   };
 
+  // Load saved profile data
+  React.useEffect(() => {
+    const savedProfile = localStorage.getItem('campusMediaProfile');
+    if (savedProfile) {
+      const profileData = JSON.parse(savedProfile);
+      setFormData({
+        displayName: profileData.displayName || user?.displayName || '',
+        bio: profileData.bio || '🎓 Campus community member • Connecting with fellow students 🚀',
+        location: profileData.location || '',
+        website: profileData.website || ''
+      });
+      setProfileImage(profileData.profileImage || null);
+    }
+  }, [user]);
+
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'from-red-400 to-pink-500',
+      'from-blue-400 to-indigo-500',
+      'from-green-400 to-teal-500',
+      'from-yellow-400 to-orange-500',
+      'from-purple-400 to-violet-500',
+      'from-pink-400 to-rose-500',
+      'from-indigo-400 to-blue-500',
+      'from-teal-400 to-cyan-500'
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -66,15 +128,36 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
         <div className="space-y-6">
           {/* Profile Picture Section */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-2xl font-bold text-white">
-                {user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
-              </span>
+            <div className="relative">
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  className="w-20 h-20 rounded-full object-cover shadow-lg ring-4 ring-white"
+                />
+              ) : (
+                <div className={`w-20 h-20 bg-gradient-to-br ${getAvatarColor(formData.displayName || user?.email || 'User')} rounded-full flex items-center justify-center shadow-lg`}>
+                  <span className="text-2xl font-bold text-white">
+                    {formData.displayName?.[0] || user?.displayName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                <Camera size={12} className="text-white" />
+              </div>
             </div>
-            <Button variant="outline" size="sm" className="rounded-full">
-              <Camera size={16} className="mr-2" />
-              Change Photo
-            </Button>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 text-blue-700 rounded-full px-4 py-2 border border-blue-200/50 flex items-center space-x-2 transition-all duration-200 hover:shadow-md">
+                <Upload size={16} />
+                <span className="font-medium">Change Photo</span>
+              </div>
+            </label>
           </div>
 
           {/* Form Fields */}
