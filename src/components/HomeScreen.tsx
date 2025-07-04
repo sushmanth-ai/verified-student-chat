@@ -63,8 +63,25 @@ const HomeScreen = () => {
   const [showReplies, setShowReplies] = useState<{ [commentId: string]: boolean }>({});
   const [activeTab, setActiveTab] = useState<'recent' | 'trending'>('recent');
   const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set());
+  const [profileData, setProfileData] = useState<any>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Load profile data
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('campusMediaProfile');
+    if (savedProfile) {
+      setProfileData(JSON.parse(savedProfile));
+    }
+    
+    // Listen for profile updates
+    const handleProfileUpdate = (event: any) => {
+      setProfileData(event.detail);
+    };
+    
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'posts'));
@@ -427,10 +444,20 @@ const HomeScreen = () => {
               {/* Post Header */}
               <div className="p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10">
                 <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${getAvatarColor(post.authorName)} rounded-full shadow-lg flex items-center justify-center ring-4 ring-white/50`}>
-                    <span className="text-white font-bold text-lg">
-                      {post.authorName[0]?.toUpperCase()}
-                    </span>
+                  <div className="w-12 h-12 rounded-full shadow-lg ring-4 ring-white/50 overflow-hidden">
+                    {post.authorId === user?.uid && profileData?.profileImage ? (
+                      <img 
+                        src={profileData.profileImage} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(post.authorName)} flex items-center justify-center`}>
+                        <span className="text-white font-bold text-lg">
+                          {post.authorName[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-900 text-lg">{post.authorName}</h3>

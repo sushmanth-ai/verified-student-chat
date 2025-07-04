@@ -149,18 +149,35 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
                 <Camera size={10} className="text-white sm:w-3 sm:h-3" />
               </div>
             </div>
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 text-blue-700 rounded-full px-3 py-2 sm:px-4 border border-blue-200/50 flex items-center space-x-2 transition-all duration-200 hover:shadow-md text-sm">
-                <Upload size={14} />
-                <span className="font-medium">Change Photo</span>
-              </div>
-            </label>
+            <div className="flex space-x-2">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 text-blue-700 rounded-full px-3 py-2 sm:px-4 border border-blue-200/50 flex items-center space-x-2 transition-all duration-200 hover:shadow-md text-sm">
+                  <Upload size={14} />
+                  <span className="font-medium">Change Photo</span>
+                </div>
+              </label>
+              {profileImage && (
+                <button
+                  onClick={() => {
+                    setProfileImage(null);
+                    toast({
+                      title: "Photo removed",
+                      description: "Profile photo has been reset to default."
+                    });
+                  }}
+                  className="bg-red-50 hover:bg-red-100 text-red-700 rounded-full px-3 py-2 sm:px-4 border border-red-200/50 flex items-center space-x-2 transition-all duration-200 hover:shadow-md text-sm"
+                >
+                  <X size={14} />
+                  <span className="font-medium">Remove</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Form Fields */}
