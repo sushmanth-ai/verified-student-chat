@@ -8,7 +8,6 @@ import { Card, CardContent } from './ui/card';
 import { useToast } from '../hooks/use-toast';
 import EditProfileModal from './EditProfileModal';
 import SettingsModal from './SettingsModal';
-import UserProfileStories from './UserProfileStories';
 import CreateStory from './CreateStory';
 
 interface Post {
@@ -137,16 +136,6 @@ const ProfileScreen = () => {
     return colors[index];
   };
 
-  const getOnlineStatus = () => {
-    if (!settings.showOnlineStatus) return null;
-    return (
-      <div className="flex items-center space-x-2 mt-2">
-        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-        <span className="text-sm text-green-100 font-medium">Online</span>
-      </div>
-    );
-  };
-
   const getProfileVisibility = () => {
     if (!settings.publicProfile) {
       return (
@@ -226,9 +215,6 @@ const ProfileScreen = () => {
           <p className="text-blue-100 mb-2 text-lg">@{getUserName().toLowerCase().replace(/\s+/g, '_')}</p>
           <p className="text-sm text-blue-100/80">{getUserEmail()}</p>
           
-          {/* Online Status */}
-          {getOnlineStatus()}
-          
           {/* Bio */}
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 mt-6 border border-white/20">
             <p className="text-sm text-blue-50 leading-relaxed">
@@ -247,20 +233,8 @@ const ProfileScreen = () => {
         </div>
       </div>
 
-      {/* Stories Section */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-6 -mt-4 relative z-20 mx-4 rounded-t-3xl shadow-xl">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-          <Star className="mr-2 text-purple-500" size={20} />
-          My Stories
-        </h3>
-        <UserProfileStories 
-          showCreateButton={true}
-          onCreateStory={() => setShowCreateStory(true)}
-        />
-      </div>
-
       {/* Stats Section */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-6 mx-4 shadow-lg">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-6 -mt-4 relative z-20 mx-4 rounded-t-3xl shadow-xl">
         <div className="grid grid-cols-3 gap-6">
           {userStats.map((stat, index) => {
             const Icon = stat.icon;

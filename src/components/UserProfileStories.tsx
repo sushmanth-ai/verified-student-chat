@@ -44,9 +44,7 @@ const UserProfileStories: React.FC<UserProfileStoriesProps> = ({
     const q = query(
       collection(db, 'stories'),
       where('authorId', '==', targetUserId),
-      where('expiresAt', '>', now),
-      orderBy('expiresAt'),
-      orderBy('createdAt', 'desc')
+      where('expiresAt', '>', now)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -55,7 +53,14 @@ const UserProfileStories: React.FC<UserProfileStoriesProps> = ({
         ...doc.data()
       })) as Story[];
       
-      setUserStories(storiesData);
+      // Sort by createdAt on client side
+      const sortedStories = storiesData.sort((a, b) => {
+        const aTime = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+        const bTime = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+        return bTime - aTime; // Descending order (newest first)
+      });
+      
+      setUserStories(sortedStories);
     });
 
     return unsubscribe;
@@ -82,7 +87,14 @@ const UserProfileStories: React.FC<UserProfileStoriesProps> = ({
   };
 
   if (userStories.length === 0 && !showCreateButton) {
-    return null;
+    return (
+      <div className="text-center py-8">
+        <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Play size={24} className="text-gray-500 dark:text-gray-400" />
+        </div>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">No stories available</p>
+      </div>
+    );
   }
 
   return (
@@ -95,11 +107,11 @@ const UserProfileStories: React.FC<UserProfileStoriesProps> = ({
             className="flex-shrink-0 flex flex-col items-center space-y-2 group"
           >
             <div className="relative">
-              <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center border-2 border-dashed border-gray-400 group-hover:border-blue-500 transition-all duration-200">
-                <Plus size={24} className="text-gray-600 group-hover:text-blue-500" />
+              <div className="w-16 h-16 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center border-2 border-dashed border-gray-400 dark:border-gray-500 group-hover:border-blue-500 transition-all duration-200">
+                <Plus size={24} className="text-gray-600 dark:text-gray-400 group-hover:text-blue-500" />
               </div>
             </div>
-            <span className="text-xs text-gray-600 font-medium">Add Story</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Add Story</span>
           </button>
         )}
 
@@ -111,9 +123,9 @@ const UserProfileStories: React.FC<UserProfileStoriesProps> = ({
             className="flex-shrink-0 flex flex-col items-center space-y-2 group"
           >
             <div className="relative">
-              {/* Story Ring */}
+              {/* Story Ring - removed green dots */}
               <div className="w-16 h-16 bg-gradient-to-tr from-purple-500 via-pink-500 to-orange-500 rounded-full p-0.5 shadow-lg">
-                <div className="w-full h-full bg-white rounded-full p-0.5">
+                <div className="w-full h-full bg-white dark:bg-gray-800 rounded-full p-0.5">
                   {story.hasImage && story.imageData ? (
                     <img 
                       src={story.imageData} 
@@ -135,13 +147,10 @@ const UserProfileStories: React.FC<UserProfileStoriesProps> = ({
                 <Play size={16} className="text-white" fill="white" />
               </div>
               
-              {/* Unviewed Indicator */}
-              {!story.views.includes(user?.uid || '') && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white"></div>
-              )}
+              {/* Unviewed Indicator - removed blue dots */}
             </div>
             
-            <span className="text-xs text-gray-700 font-medium max-w-16 truncate">
+            <span className="text-xs text-gray-700 dark:text-gray-300 font-medium max-w-16 truncate">
               {story.authorId === user?.uid ? 'Your Story' : story.authorName}
             </span>
           </button>
