@@ -94,19 +94,23 @@
 
   /* Dark mode styles */
   .dark body {
-    background: linear-gradient(135deg, hsl(220, 15%, 8%) 0%, hsl(230, 20%, 10%) 50%, hsl(240, 25%, 12%) 100%);
+    background: linear-gradient(135deg, hsl(220, 20%, 5%) 0%, hsl(230, 25%, 8%) 50%, hsl(240, 30%, 12%) 100%);
   }
 
   .dark .bg-gradient-to-br {
-    background: linear-gradient(135deg, hsl(220, 15%, 12%) 0%, hsl(230, 20%, 14%) 50%, hsl(240, 25%, 16%) 100%) !important;
+    background: linear-gradient(135deg, hsl(220, 25%, 10%) 0%, hsl(230, 30%, 12%) 50%, hsl(240, 35%, 15%) 100%) !important;
   }
 
   .dark .bg-white\/80 {
-    background: hsl(220, 15%, 15% / 0.9) !important;
+    background: hsl(220, 20%, 12% / 0.95) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(220, 25%, 20% / 0.5) !important;
   }
 
   .dark .bg-white\/90 {
-    background: hsl(220, 15%, 16% / 0.95) !important;
+    background: hsl(220, 20%, 14% / 0.98) !important;
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(220, 25%, 25% / 0.6) !important;
   }
 
   .dark .text-gray-800 {
@@ -114,31 +118,46 @@
   }
 
   .dark .text-gray-600 {
-    color: hsl(0, 0%, 70%) !important;
+    color: hsl(220, 15%, 70%) !important;
   }
 
   .dark .text-gray-700 {
-    color: hsl(0, 0%, 80%) !important;
+    color: hsl(220, 15%, 80%) !important;
   }
 
   .dark .text-gray-500 {
-    color: hsl(0, 0%, 60%) !important;
+    color: hsl(220, 15%, 65%) !important;
   }
 
   .dark .border-white\/20 {
-    border-color: hsl(220, 15%, 25% / 0.3) !important;
+    border-color: hsl(220, 25%, 20% / 0.4) !important;
   }
 
   .dark .border-white\/30 {
-    border-color: hsl(220, 15%, 30% / 0.4) !important;
+    border-color: hsl(220, 25%, 25% / 0.5) !important;
   }
 
   .dark .bg-gray-50 {
-    background: hsl(220, 15%, 16%) !important;
+    background: hsl(220, 20%, 18%) !important;
   }
 
   .dark .bg-gray-100 {
-    background: hsl(220, 15%, 18%) !important;
+    background: hsl(220, 20%, 22%) !important;
+  }
+
+  /* Enhanced dark mode card and glass effects */
+  .dark .bg-white\/10 {
+    background: hsl(220, 25%, 15% / 0.8) !important;
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(220, 30%, 25% / 0.3) !important;
+  }
+
+  .dark .shadow-xl {
+    box-shadow: 0 20px 25px -5px hsl(220, 30%, 5% / 0.8), 0 10px 10px -5px hsl(220, 30%, 5% / 0.4) !important;
+  }
+
+  .dark .shadow-lg {
+    box-shadow: 0 10px 15px -3px hsl(220, 30%, 5% / 0.6), 0 4px 6px -2px hsl(220, 30%, 5% / 0.3) !important;
   }
 
   input,

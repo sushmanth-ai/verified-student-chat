@@ -444,23 +444,30 @@ const HomeScreen = () => {
               {/* Post Header */}
               <div className="p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full shadow-lg ring-4 ring-white/50 overflow-hidden">
-                    {post.authorId === user?.uid && profileData?.profileImage ? (
-                      <img 
-                        src={profileData.profileImage} 
-                        alt="Profile" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(post.authorName)} flex items-center justify-center`}>
-                        <span className="text-white font-bold text-lg">
-                          {post.authorName[0]?.toUpperCase()}
-                        </span>
-                      </div>
-                    )}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full shadow-lg ring-4 ring-white/50 overflow-hidden">
+                      {post.authorId === user?.uid && profileData?.profileImage ? (
+                        <img 
+                          src={profileData.profileImage} 
+                          alt="Profile" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(post.authorName)} flex items-center justify-center`}>
+                          <span className="text-white font-bold text-lg">
+                            {post.authorName[0]?.toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Online status indicator */}
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full animate-pulse"></div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 text-lg">{post.authorName}</h3>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-bold text-gray-900 text-lg">{post.authorName}</h3>
+                      <span className="text-xs text-green-600 font-medium bg-green-100 px-2 py-1 rounded-full">Online</span>
+                    </div>
                     <p className="text-sm text-gray-600 bg-gray-100 px-3 py-1 rounded-full inline-block font-medium">
                       {formatTimestamp(post.createdAt)}
                     </p>
