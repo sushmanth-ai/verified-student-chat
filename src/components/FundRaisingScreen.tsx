@@ -125,16 +125,16 @@ const FundRaisingScreen = () => {
     <div className="flex flex-col h-full bg-gradient-to-br from-background via-secondary/30 to-accent/20 dark:from-background dark:via-primary/5 dark:to-secondary/10">
       {/* Header */}
       <div className="p-4 bg-card/80 backdrop-blur-sm border-b border-border/50">
-        <div className="flex items-center justify-between mb-4">
-          <div>
+        <div className="flex items-start justify-between mb-4 gap-4">
+          <div className="flex-1">
             <h2 className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
               Fund Raising
             </h2>
-            <p className="text-sm text-muted-foreground">Support campus initiatives</p>
+            <p className="text-sm text-muted-foreground mt-1">Support campus initiatives</p>
           </div>
           <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg">
+              <Button className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg shrink-0">
                 <Plus size={16} className="mr-2" />
                 Start Campaign
               </Button>
