@@ -144,18 +144,18 @@ const FundRaisingScreen = () => {
         </div>
 
         {/* Search and Filter */}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search campaigns..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-xl bg-secondary/50 border-border/50"
+              className="pl-10 rounded-xl bg-secondary/50 border-border/50 w-full"
             />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-32 rounded-xl bg-secondary/50 border-border/50">
+            <SelectTrigger className="w-full sm:w-40 rounded-xl bg-secondary/50 border-border/50">
               <Filter size={16} className="mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -170,51 +170,53 @@ const FundRaisingScreen = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Top Campaigns */}
-        {topCampaigns.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp size={20} className="text-orange-500" />
-              <h3 className="font-semibold text-lg">Top Campaigns</h3>
-            </div>
-            <div className="grid gap-3">
-              {topCampaigns.map(campaign => (
-                <div key={campaign.id} className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-800/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-sm">{campaign.title}</h4>
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
-                      #{Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)}%
-                    </Badge>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-8">
+          {/* Top Campaigns */}
+          {topCampaigns.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={20} className="text-orange-500" />
+                <h3 className="font-semibold text-lg">Top Campaigns</h3>
+              </div>
+              <div className="grid gap-4">
+                {topCampaigns.map(campaign => (
+                  <div key={campaign.id} className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-800/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-base">{campaign.title}</h4>
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
+                        {Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)}%
+                      </Badge>
+                    </div>
+                    <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-3 mb-2" />
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>₹{campaign.raisedAmount.toLocaleString()}</span>
+                      <span>₹{campaign.goalAmount.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>₹{campaign.raisedAmount.toLocaleString()}</span>
-                    <span>₹{campaign.goalAmount.toLocaleString()}</span>
-                  </div>
-                </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* All Campaigns */}
+          <section className="space-y-4">
+            <h3 className="font-semibold text-lg">All Campaigns</h3>
+            <div className="grid gap-6">
+              {filteredCampaigns.map(campaign => (
+                <CampaignCard 
+                  key={campaign.id}
+                  campaign={campaign}
+                  onLike={() => handleLike(campaign.id)}
+                  onDonate={() => {
+                    setSelectedCampaign(campaign);
+                    setShowDonationModal(true);
+                  }}
+                  isLiked={campaign.likes.includes(user?.uid || '')}
+                />
               ))}
             </div>
-          </div>
-        )}
-
-        {/* All Campaigns */}
-        <div>
-          <h3 className="font-semibold text-lg mb-3">All Campaigns</h3>
-          <div className="space-y-4">
-            {filteredCampaigns.map(campaign => (
-              <CampaignCard 
-                key={campaign.id}
-                campaign={campaign}
-                onLike={() => handleLike(campaign.id)}
-                onDonate={() => {
-                  setSelectedCampaign(campaign);
-                  setShowDonationModal(true);
-                }}
-                isLiked={campaign.likes.includes(user?.uid || '')}
-              />
-            ))}
-          </div>
+          </section>
         </div>
       </div>
 
@@ -351,66 +353,71 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="title">Campaign Title</Label>
-        <Input
-          id="title"
-          value={formData.title}
-          onChange={(e) => setFormData({...formData, title: e.target.value})}
-          placeholder="Help build a new library..."
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({...formData, description: e.target.value})}
-          placeholder="Tell people about your campaign..."
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="goalAmount">Goal Amount (₹)</Label>
-        <Input
-          id="goalAmount"
-          type="number"
-          value={formData.goalAmount}
-          onChange={(e) => setFormData({...formData, goalAmount: e.target.value})}
-          placeholder="50000"
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="category">Category</Label>
-        <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="education">Education</SelectItem>
-            <SelectItem value="health">Health</SelectItem>
-            <SelectItem value="events">Events</SelectItem>
-            <SelectItem value="emergencies">Emergencies</SelectItem>
-            <SelectItem value="sports">Sports</SelectItem>
-            <SelectItem value="clubs">Clubs</SelectItem>
-            <SelectItem value="environment">Environment</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="flex gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-          Cancel
-        </Button>
-        <Button type="submit" className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600">
-          Create Campaign
-        </Button>
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-6 p-1">
+        <div className="space-y-2">
+          <Label htmlFor="title" className="text-sm font-medium">Campaign Title</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+            placeholder="Help build a new library..."
+            className="w-full"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+            placeholder="Tell people about your campaign..."
+            className="w-full min-h-[100px] resize-none"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="goalAmount" className="text-sm font-medium">Goal Amount (₹)</Label>
+          <Input
+            id="goalAmount"
+            type="number"
+            value={formData.goalAmount}
+            onChange={(e) => setFormData({...formData, goalAmount: e.target.value})}
+            placeholder="50000"
+            className="w-full"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="category" className="text-sm font-medium">Category</Label>
+          <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="education">Education</SelectItem>
+              <SelectItem value="health">Health</SelectItem>
+              <SelectItem value="events">Events</SelectItem>
+              <SelectItem value="emergencies">Emergencies</SelectItem>
+              <SelectItem value="sports">Sports</SelectItem>
+              <SelectItem value="clubs">Clubs</SelectItem>
+              <SelectItem value="environment">Environment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button type="submit" className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600">
+            Create Campaign
+          </Button>
+        </div>
       </div>
     </form>
   );
