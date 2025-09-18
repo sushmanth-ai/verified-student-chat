@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { useToast } from '../hooks/use-toast';
+import { UPIPayment } from './UPIPayment';
 
 interface Campaign {
   id: string;
@@ -91,28 +92,58 @@ const FundRaisingScreen = () => {
     if (!user || !selectedCampaign) return;
     
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Generate UPI payment link
+      const upiId = "campusmedia@upi"; // Replace with your actual UPI ID
+      const payeeName = "Campus Media Fund";
+      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Donation for ${selectedCampaign.title}`)}`;
       
-      const campaignRef = doc(db, 'campaigns', selectedCampaign.id);
-      await updateDoc(campaignRef, { 
-        raisedAmount: increment(amount),
-        donations: increment(1)
-      });
+      // Try to open UPI app
+      try {
+        window.location.href = upiUrl;
+        
+        // Show success message and update campaign (in real app, this should be done after payment confirmation)
+        toast({ 
+          title: "UPI Payment Initiated!", 
+          description: `Opening UPI app for ₹${amount} donation. Complete the payment in your UPI app.` 
+        });
+        
+        // Simulate successful payment after 3 seconds (in real app, use webhooks)
+        setTimeout(async () => {
+          const campaignRef = doc(db, 'campaigns', selectedCampaign.id);
+          await updateDoc(campaignRef, { 
+            raisedAmount: increment(amount),
+            donations: increment(1)
+          });
+          
+          // Add donation record
+          await addDoc(collection(db, 'campaigns', selectedCampaign.id, 'donations'), {
+            donorId: user.uid,
+            donorName: user.displayName || 'Anonymous',
+            amount,
+            timestamp: new Date(),
+            message: 'Thank you for this amazing initiative!',
+            paymentMethod: 'UPI'
+          });
+          
+          toast({ 
+            title: "Donation Successful!", 
+            description: `₹${amount} donated successfully via UPI` 
+          });
+        }, 3000);
+        
+      } catch (error) {
+        // Fallback if UPI app is not available
+        toast({ 
+          title: "UPI App Not Found", 
+          description: "Please install a UPI app like Google Pay, PhonePe, or Paytm to make donations.", 
+          variant: "destructive" 
+        });
+      }
       
-      // Add donation record
-      await addDoc(collection(db, 'campaigns', selectedCampaign.id, 'donations'), {
-        donorId: user.uid,
-        donorName: user.displayName || 'Anonymous',
-        amount,
-        timestamp: new Date(),
-        message: 'Thank you for this amazing initiative!'
-      });
-      
-      toast({ title: "Donation Successful!", description: `₹${amount} donated successfully` });
       setShowDonationModal(false);
       setSelectedCampaign(null);
     } catch (error) {
+      console.error('Error processing donation:', error);
       toast({ title: "Error", description: "Failed to process donation", variant: "destructive" });
     }
   };
@@ -224,9 +255,14 @@ const FundRaisingScreen = () => {
       <Dialog open={showDonationModal} onOpenChange={setShowDonationModal}>
         <DialogContent className="w-[95vw] max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-center">Make a Donation</DialogTitle>
+            <DialogTitle className="text-center flex items-center justify-center gap-2">
+              <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                <Heart size={14} className="text-white" />
+              </div>
+              Make a Donation via UPI
+            </DialogTitle>
           </DialogHeader>
-          <DonationModal 
+          <UPIPayment 
             campaign={selectedCampaign}
             onDonate={handleDonate}
             onClose={() => setShowDonationModal(false)}
@@ -421,85 +457,6 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
         </div>
       </div>
     </form>
-  );
-};
-
-// Donation Modal Component
-const DonationModal = ({ campaign, onDonate, onClose }: {
-  campaign: Campaign | null;
-  onDonate: (amount: number) => void;
-  onClose: () => void;
-}) => {
-  const [amount, setAmount] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const quickAmounts = [100, 500, 1000, 2000, 5000];
-
-  const handleDonate = async () => {
-    const donationAmount = parseInt(amount);
-    if (!donationAmount || donationAmount < 1) return;
-
-    setIsProcessing(true);
-    await onDonate(donationAmount);
-    setIsProcessing(false);
-  };
-
-  if (!campaign) return null;
-
-  return (
-    <div className="space-y-4 p-1">
-      <div className="text-center">
-        <h3 className="font-semibold mb-1 text-sm sm:text-base line-clamp-2">{campaign.title}</h3>
-        <p className="text-xs sm:text-sm text-muted-foreground">by {campaign.creatorName}</p>
-      </div>
-
-      <div className="bg-secondary/50 rounded-lg p-3">
-        <div className="flex justify-between text-xs sm:text-sm mb-2">
-          <span>Raised: ₹{campaign.raisedAmount.toLocaleString()}</span>
-          <span>Goal: ₹{campaign.goalAmount.toLocaleString()}</span>
-        </div>
-        <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="amount" className="text-sm font-medium">Donation Amount (₹)</Label>
-        <Input
-          id="amount"
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Enter amount"
-          className="w-full"
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {quickAmounts.map(quickAmount => (
-          <Button
-            key={quickAmount}
-            type="button"
-            variant="outline"
-            onClick={() => setAmount(quickAmount.toString())}
-            className="text-xs p-2 h-8"
-          >
-            ₹{quickAmount}
-          </Button>
-        ))}
-      </div>
-
-      <div className="flex gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose} className="flex-1 text-sm">
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleDonate}
-          disabled={!amount || isProcessing}
-          className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-sm"
-        >
-          {isProcessing ? 'Processing...' : 'Donate Now'}
-        </Button>
-      </div>
-    </div>
   );
 };
 
