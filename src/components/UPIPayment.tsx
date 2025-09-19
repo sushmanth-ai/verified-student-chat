@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smartphone, CreditCard, QrCode, CheckCircle, AlertCircle, Heart, ArrowRight } from 'lucide-react';
+import { Smartphone, CreditCard, QrCode, CheckCircle, AlertCircle, Heart, ArrowRight, Copy, ExternalLink } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
@@ -27,7 +27,8 @@ interface UPIPaymentProps {
 export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onClose }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'amount' | 'processing' | 'confirm' | 'success'>('amount');
+  const [paymentStep, setPaymentStep] = useState<'amount' | 'upi-details' | 'confirm' | 'success'>('amount');
+  const [paymentMethod, setPaymentMethod] = useState<'upi-link' | 'manual'>('upi-link');
   const { toast } = useToast();
 
   const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
@@ -38,13 +39,11 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     { name: 'BHIM', color: 'from-orange-500 to-red-500', icon: '🏛️' },
   ];
 
-  const validateUPIId = (upiId: string): boolean => {
-    // UPI ID format validation
-    const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+$/;
-    return upiRegex.test(upiId);
-  };
+  // UPI ID for receiving payments
+  const upiId = "sushmanth1106@okhdfcbank";
+  const payeeName = "Campus Media Fund";
 
-  const handleDonate = async () => {
+  const validateAmount = () => {
     const donationAmount = parseInt(amount);
     if (!donationAmount || donationAmount < 1) {
       toast({ 
@@ -52,7 +51,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         description: "Please enter a valid donation amount", 
         variant: "destructive" 
       });
-      return;
+      return false;
     }
 
     if (donationAmount < 10) {
@@ -61,106 +60,70 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         description: "Minimum donation amount is ₹10", 
         variant: "destructive" 
       });
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const handleProceedToPayment = () => {
+    if (!validateAmount()) return;
+    setPaymentStep('upi-details');
+  };
+
+  const handleUPILinkPayment = () => {
+    const donationAmount = parseInt(amount);
+    const transactionNote = `Donation for ${campaign?.title || 'Campaign'}`;
+    const tr = `CM${Date.now()}`;
+    
+    // Create UPI payment URL
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}&tr=${tr}`;
+    
     setIsProcessing(true);
-    setPaymentStep('processing');
-
+    
+    // Try to open UPI app
     try {
-      // UPI ID for receiving donations
-      const upiId = "sushmanth1106@okhdfcbank";
-      const payeeName = "Campus Media Fund";
-      const transactionNote = `Donation for ${campaign?.title || 'Campaign'}`;
-
-      // Validate UPI ID format
-      if (!validateUPIId(upiId)) {
-        throw new Error('Invalid UPI ID format');
-      }
-
-      // Generate robust UPI payment link with transaction reference (improves compatibility)
-      const tr = `CM${Date.now()}`; // unique transaction reference
-      const baseParams =
-        `pa=${encodeURIComponent(upiId)}` +
-        `&pn=${encodeURIComponent(payeeName)}` +
-        `&am=${encodeURIComponent(String(donationAmount))}` +
-        `&cu=INR` +
-        `&tn=${encodeURIComponent(transactionNote)}` +
-        `&tr=${encodeURIComponent(tr)}`;
-      const upiUrl = `upi://pay?${baseParams}`;
-      const intentUrl = `intent://pay?${baseParams}#Intent;scheme=upi;end`;
-
-      console.log('Generated UPI URL:', upiUrl, '\nTR:', tr);
-      console.log('UPI ID:', upiId);
-      console.log('Amount:', donationAmount);
-      
-      // Check if device supports UPI
-      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        // On mobile, open UPI app and wait for user return
-        toast({ 
-          title: "Opening UPI App", 
-          description: "Complete the payment in your UPI app and return here to confirm." 
-        });
-        
-        // Track when user returns from UPI app
-        let hasReturnedFromUPI = false;
-        
-        const handleVisibilityChange = () => {
-          if (!document.hidden && hasReturnedFromUPI) {
-            // User returned from UPI app
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            setPaymentStep('confirm');
-          }
-        };
-        
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        
-        // Open UPI app (standard UPI deep link)
-        window.location.href = upiUrl;
-        hasReturnedFromUPI = true;
-
-        // Android fallback: if app chooser didn't open, try intent scheme
-        if (/Android/i.test(navigator.userAgent)) {
-          setTimeout(() => {
-            if (document.visibilityState === 'visible') {
-              window.location.href = intentUrl;
-            }
-          }, 600);
-        }
-        
-        // Fallback timeout in case visibility API doesn't work
-        setTimeout(() => {
-          if (paymentStep === 'processing') {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            setPaymentStep('confirm');
-          }
-        }, 5000);
-        
-      } else {
-        // On desktop, provide UPI link for mobile scanning
-        toast({ 
-          title: "UPI Payment Link Generated", 
-          description: "Use your mobile device to complete the payment." 
-        });
-        
-        setPaymentStep('confirm');
-      }
-      
-    } catch (error) {
-      console.error('UPI payment error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      window.open(upiUrl, '_self');
       
       toast({ 
-        title: "UPI Payment Failed", 
-        description: `Error: ${errorMessage}. Please try again.`, 
-        variant: "destructive" 
+        title: "Opening UPI App", 
+        description: "Complete the payment and return here to confirm." 
       });
       
-      setPaymentStep('amount');
+      // After 3 seconds, show confirmation step
+      setTimeout(() => {
+        setIsProcessing(false);
+        setPaymentStep('confirm');
+      }, 3000);
+      
+    } catch (error) {
       setIsProcessing(false);
+      toast({ 
+        title: "Error", 
+        description: "Could not open UPI app. Please try manual payment.", 
+        variant: "destructive" 
+      });
+      setPaymentMethod('manual');
     }
+  };
+
+  const copyUPIDetails = () => {
+    const details = `UPI ID: ${upiId}\nAmount: ₹${amount}\nNote: Donation for ${campaign?.title}`;
+    navigator.clipboard.writeText(details).then(() => {
+      toast({ 
+        title: "Details Copied!", 
+        description: "UPI details copied to clipboard. Open any UPI app to pay." 
+      });
+    });
+  };
+
+  const copyUPIId = () => {
+    navigator.clipboard.writeText(upiId).then(() => {
+      toast({ 
+        title: "UPI ID Copied!", 
+        description: "Paste this in your UPI app to make payment." 
+      });
+    });
   };
 
   const handlePaymentConfirm = (success: boolean) => {
@@ -171,6 +134,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         setPaymentStep('amount');
         setIsProcessing(false);
         setAmount('');
+        setPaymentMethod('upi-link');
       }, 2000);
     } else {
       toast({ 
@@ -180,30 +144,30 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       });
       setPaymentStep('amount');
       setIsProcessing(false);
+      setPaymentMethod('upi-link');
     }
   };
 
-  const copyUPILink = () => {
-    if (!campaign) return;
-    
-    const donationAmount = parseInt(amount);
-    if (!donationAmount) return;
-    
-    const upiId = "sushmanth1106@okhdfcbank";
-    const payeeName = "Campus Media Fund";
-    const transactionNote = `Donation for ${campaign.title}`;
-    const tr = `CM${Date.now()}`;
-    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(String(donationAmount))}&cu=INR&tn=${encodeURIComponent(transactionNote)}&tr=${encodeURIComponent(tr)}`;
-    
-    navigator.clipboard.writeText(upiUrl).then(() => {
-      toast({ 
-        title: "UPI Link Copied!", 
-        description: "Paste this link in any UPI app to complete the donation." 
-      });
-    });
-  };
-
   if (!campaign) return null;
+
+  if (paymentStep === 'success') {
+    return (
+      <div className="space-y-6 p-4 text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto animate-bounce">
+          <CheckCircle size={32} className="text-white" />
+        </div>
+        <div>
+          <h3 className="font-bold text-lg text-green-600 mb-2">Payment Successful!</h3>
+          <p className="text-sm text-muted-foreground">Thank you for your generous donation of ₹{amount}</p>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
+          <p className="text-green-800 dark:text-green-200 font-medium text-sm">
+            Your contribution will make a real difference!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (paymentStep === 'confirm') {
     return (
@@ -214,7 +178,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
           </div>
           <h3 className="font-bold text-lg mb-2">Confirm Payment Status</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Did you complete the payment of ₹{amount} to sushmanth1106@okhdfcbank?
+            Did you complete the payment of ₹{amount}?
           </p>
         </div>
         
@@ -225,7 +189,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
             </div>
             <div>
               <p className="font-semibold text-blue-800 dark:text-blue-200">Payment Details</p>
-              <p className="text-xs text-blue-600 dark:text-blue-300">UPI ID: sushmanth1106@okhdfcbank</p>
+              <p className="text-xs text-blue-600 dark:text-blue-300">UPI ID: {upiId}</p>
             </div>
           </div>
           <div className="text-sm text-blue-700 dark:text-blue-300">
@@ -262,63 +226,130 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     );
   }
 
-  if (paymentStep === 'processing') {
+  if (paymentStep === 'upi-details') {
     return (
       <div className="space-y-6 p-4">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Smartphone size={32} className="text-white" />
           </div>
-          <h3 className="font-bold text-lg mb-2">Processing Payment</h3>
-          <p className="text-sm text-muted-foreground">Opening your UPI app...</p>
+          <h3 className="font-bold text-lg mb-2">Choose Payment Method</h3>
+          <p className="text-sm text-muted-foreground">Amount: ₹{amount}</p>
         </div>
-        
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <Smartphone size={16} className="text-white" />
-            </div>
-            <div>
-              <p className="font-semibold text-blue-800 dark:text-blue-200">UPI Payment Initiated</p>
-              <p className="text-xs text-blue-600 dark:text-blue-300">Amount: ₹{amount}</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Opening UPI app...</span>
-              <span className="text-blue-600">●</span>
-            </div>
-            <Progress value={75} className="h-2" />
+
+        {/* Payment Method Selection */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3">
+            {/* UPI Link Method */}
+            <Card className={`cursor-pointer transition-all duration-200 ${paymentMethod === 'upi-link' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`} onClick={() => setPaymentMethod('upi-link')}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <ExternalLink size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">UPI App Link</h4>
+                    <p className="text-xs text-muted-foreground">Open directly in UPI app</p>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Manual Method */}
+            <Card className={`cursor-pointer transition-all duration-200 ${paymentMethod === 'manual' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`} onClick={() => setPaymentMethod('manual')}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center">
+                    <Copy size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">Manual Payment</h4>
+                    <p className="text-xs text-muted-foreground">Copy UPI ID and pay manually</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {upiApps.map((app, index) => (
-            <div key={app.name} className={`bg-gradient-to-r ${app.color} rounded-xl p-3 text-white text-center opacity-80`}>
-              <div className="text-2xl mb-1">{app.icon}</div>
-              <p className="text-xs font-medium">{app.name}</p>
-            </div>
-          ))}
+        {/* UPI Apps Preview */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <QrCode size={16} className="text-muted-foreground" />
+            <p className="text-sm font-medium">Supported UPI Apps</p>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {upiApps.map((app) => (
+              <div key={app.name} className={`bg-gradient-to-br ${app.color} rounded-lg p-2 text-white text-center shadow-md`}>
+                <div className="text-lg mb-1">{app.icon}</div>
+                <p className="text-xs font-medium">{app.name}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    );
-  }
 
-  if (paymentStep === 'success') {
-    return (
-      <div className="space-y-6 p-4 text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto animate-bounce">
-          <CheckCircle size={32} className="text-white" />
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-2">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setPaymentStep('amount')} 
+            className="flex-1 text-sm rounded-xl"
+          >
+            Back
+          </Button>
+          <Button 
+            onClick={() => {
+              if (paymentMethod === 'upi-link') {
+                handleUPILinkPayment();
+              } else {
+                setPaymentStep('confirm');
+              }
+            }}
+            className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-sm rounded-xl"
+          >
+            {paymentMethod === 'upi-link' ? 'Open UPI App' : 'Continue'}
+          </Button>
         </div>
-        <div>
-          <h3 className="font-bold text-lg text-green-600 mb-2">Payment Successful!</h3>
-          <p className="text-sm text-muted-foreground">Thank you for your generous donation of ₹{amount}</p>
-        </div>
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-          <p className="text-green-800 dark:text-green-200 font-medium text-sm">
-            Your contribution will make a real difference!
-          </p>
-        </div>
+
+        {/* Manual Payment Details */}
+        {paymentMethod === 'manual' && (
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800 space-y-3">
+            <h4 className="font-semibold text-green-800 dark:text-green-200 text-sm">Payment Details</h4>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded-lg">
+                <span className="text-sm font-medium">UPI ID:</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{upiId}</code>
+                  <Button size="sm" variant="ghost" onClick={copyUPIId} className="h-6 w-6 p-0">
+                    <Copy size={12} />
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded-lg">
+                <span className="text-sm font-medium">Amount:</span>
+                <span className="text-sm font-bold">₹{amount}</span>
+              </div>
+              
+              <div className="flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded-lg">
+                <span className="text-sm font-medium">Note:</span>
+                <span className="text-xs text-muted-foreground">Donation for {campaign?.title}</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={copyUPIDetails}
+              variant="outline"
+              className="w-full text-sm"
+            >
+              <Copy size={14} className="mr-2" />
+              Copy All Details
+            </Button>
+          </div>
+        )}
       </div>
     );
   }
@@ -349,24 +380,21 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         </div>
       </div>
 
-      {/* UPI Payment Section */}
+      {/* Amount Selection */}
       <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <Smartphone size={14} className="text-white" />
+              <Heart size={14} className="text-white" />
             </div>
-            <h4 className="font-semibold text-sm">UPI Payment</h4>
-            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-              Instant
-            </Badge>
+            <h4 className="font-semibold text-sm">Donation Amount</h4>
           </div>
           
           <div className="space-y-3">
             <div>
               <Label htmlFor="amount" className="text-sm font-medium flex items-center gap-2">
                 <CreditCard size={14} />
-                Donation Amount (₹)
+                Amount (₹)
               </Label>
               <Input
                 id="amount"
@@ -396,23 +424,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         </CardContent>
       </Card>
 
-      {/* UPI Apps Preview */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <QrCode size={16} className="text-muted-foreground" />
-          <p className="text-sm font-medium">Supported UPI Apps</p>
-        </div>
-        <div className="grid grid-cols-4 gap-2">
-          {upiApps.map((app) => (
-            <div key={app.name} className={`bg-gradient-to-br ${app.color} rounded-lg p-2 text-white text-center shadow-md`}>
-              <div className="text-lg mb-1">{app.icon}</div>
-              <p className="text-xs font-medium">{app.name}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Payment Instructions */}
+      {/* Instructions */}
       <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
         <div className="flex items-start gap-2">
           <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
@@ -420,9 +432,9 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">How it works:</p>
             <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
               <li>• Enter donation amount</li>
-              <li>• Click "Donate via UPI"</li>
-              <li>• Complete payment in your UPI app</li>
-              <li>• Donation will be added to campaign</li>
+              <li>• Choose payment method</li>
+              <li>• Complete payment in UPI app</li>
+              <li>• Return here to confirm</li>
             </ul>
           </div>
         </div>
@@ -435,44 +447,20 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
           variant="outline" 
           onClick={onClose} 
           className="flex-1 text-sm rounded-xl"
-          disabled={isProcessing}
         >
           Cancel
         </Button>
         <Button 
-          onClick={handleDonate}
-          disabled={!amount || parseInt(amount) < 10 || isProcessing}
+          onClick={handleProceedToPayment}
+          disabled={!amount || parseInt(amount) < 10}
           className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
         >
-          {isProcessing ? (
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              <span>Processing...</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Smartphone size={16} />
-              <span>Donate via UPI</span>
-              <ArrowRight size={14} />
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <ArrowRight size={16} />
+            <span>Proceed to Pay</span>
+          </div>
         </Button>
       </div>
-
-      {/* Desktop UPI Link Copy */}
-      {amount && parseInt(amount) >= 10 && (
-        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={copyUPILink}
-            className="w-full text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl"
-          >
-            <QrCode size={14} className="mr-2" />
-            Copy UPI Payment Link
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
