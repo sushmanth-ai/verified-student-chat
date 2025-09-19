@@ -38,6 +38,12 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     { name: 'BHIM', color: 'from-orange-500 to-red-500', icon: '🏛️' },
   ];
 
+  const validateUPIId = (upiId: string): boolean => {
+    // UPI ID format validation
+    const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+$/;
+    return upiRegex.test(upiId);
+  };
+
   const handleDonate = async () => {
     const donationAmount = parseInt(amount);
     if (!donationAmount || donationAmount < 1) {
@@ -62,40 +68,64 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     setPaymentStep('processing');
 
     try {
-      // Generate UPI payment link
-      const upiId = "sushmanth1106@okhdfcbank"; // UPI ID for receiving donations
+      // UPI ID for receiving donations (Google Pay format)
+      const upiId = "sushmanth1106@okhdfcbank";
       const payeeName = "Campus Media Fund";
-      const transactionNote = `Donation for ${campaign?.title}`;
+      const transactionNote = `Donation: ${campaign?.title || 'Campaign'}`;
       
-      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+      // Validate UPI ID format
+      if (!validateUPIId(upiId)) {
+        throw new Error('Invalid UPI ID format');
+      }
+      
+      // Generate UPI payment link with proper encoding
+      const upiParams = new URLSearchParams({
+        pa: upiId,
+        pn: payeeName,
+        am: donationAmount.toString(),
+        cu: 'INR',
+        tn: transactionNote
+      });
+      
+      const upiUrl = `upi://pay?${upiParams.toString()}`;
+      
+      console.log('Generated UPI URL:', upiUrl);
+      console.log('UPI ID:', upiId);
+      console.log('Amount:', donationAmount);
       
       // Check if device supports UPI
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
         // On mobile, try to open UPI app
-        window.location.href = upiUrl;
-        
-        toast({ 
-          title: "Opening UPI App", 
-          description: "Complete the payment in your UPI app to finish the donation." 
-        });
-        
-        // Show processing state
-        setTimeout(() => {
-          setPaymentStep('success');
+        try {
+          window.location.href = upiUrl;
+          
+          toast({ 
+            title: "Redirecting to UPI App", 
+            description: "Complete the payment to sushmanth1106@okhdfcbank in your UPI app." 
+          });
+          
+          // Show processing state
           setTimeout(() => {
-            onDonate(donationAmount);
-            setPaymentStep('amount');
-            setIsProcessing(false);
-          }, 2000);
-        }, 1000);
+            setPaymentStep('success');
+            setTimeout(() => {
+              onDonate(donationAmount);
+              setPaymentStep('amount');
+              setIsProcessing(false);
+            }, 2000);
+          }, 1000);
+          
+        } catch (urlError) {
+          console.error('Failed to open UPI URL:', urlError);
+          throw new Error('Unable to open UPI app');
+        }
         
       } else {
-        // On desktop, show QR code or instructions
+        // On desktop, show instructions
         toast({ 
-          title: "UPI Payment Link Generated", 
-          description: "Use your mobile device to scan QR code or copy the UPI link." 
+          title: "UPI Payment Link Ready", 
+          description: "Copy the UPI link below or scan QR code on your mobile device." 
         });
         
         // For demo purposes, simulate successful payment
@@ -111,11 +141,14 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       
     } catch (error) {
       console.error('UPI payment error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast({ 
-        title: "Payment Failed", 
-        description: "Unable to initiate UPI payment. Please try again.", 
+        title: "UPI Payment Failed", 
+        description: `Error: ${errorMessage}. Please verify UPI ID: sushmanth1106@okhdfcbank`, 
         variant: "destructive" 
       });
+      
       setPaymentStep('amount');
       setIsProcessing(false);
     }
