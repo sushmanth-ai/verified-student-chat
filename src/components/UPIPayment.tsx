@@ -27,7 +27,7 @@ interface UPIPaymentProps {
 export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onClose }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'amount' | 'processing' | 'success'>('amount');
+  const [paymentStep, setPaymentStep] = useState<'amount' | 'processing' | 'confirm' | 'success'>('amount');
   const { toast } = useToast();
 
   const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
@@ -68,26 +68,18 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     setPaymentStep('processing');
 
     try {
-      // UPI ID for receiving donations (Google Pay format)
+      // UPI ID for receiving donations
       const upiId = "sushmanth1106@okhdfcbank";
       const payeeName = "Campus Media Fund";
-      const transactionNote = `Donation: ${campaign?.title || 'Campaign'}`;
+      const transactionNote = `Donation for ${campaign?.title || 'Campaign'}`;
       
       // Validate UPI ID format
       if (!validateUPIId(upiId)) {
         throw new Error('Invalid UPI ID format');
       }
       
-      // Generate UPI payment link with proper encoding
-      const upiParams = new URLSearchParams({
-        pa: upiId,
-        pn: payeeName,
-        am: donationAmount.toString(),
-        cu: 'INR',
-        tn: transactionNote
-      });
-      
-      const upiUrl = `upi://pay?${upiParams.toString()}`;
+      // Generate UPI payment link - using standard format for better compatibility
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
       
       console.log('Generated UPI URL:', upiUrl);
       console.log('UPI ID:', upiId);
@@ -97,46 +89,45 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // On mobile, try to open UPI app
-        try {
-          window.location.href = upiUrl;
-          
-          toast({ 
-            title: "Redirecting to UPI App", 
-            description: "Complete the payment to sushmanth1106@okhdfcbank in your UPI app." 
-          });
-          
-          // Show processing state
-          setTimeout(() => {
-            setPaymentStep('success');
-            setTimeout(() => {
-              onDonate(donationAmount);
-              setPaymentStep('amount');
-              setIsProcessing(false);
-            }, 2000);
-          }, 1000);
-          
-        } catch (urlError) {
-          console.error('Failed to open UPI URL:', urlError);
-          throw new Error('Unable to open UPI app');
-        }
-        
-      } else {
-        // On desktop, show instructions
+        // On mobile, open UPI app and wait for user return
         toast({ 
-          title: "UPI Payment Link Ready", 
-          description: "Copy the UPI link below or scan QR code on your mobile device." 
+          title: "Opening UPI App", 
+          description: "Complete the payment in your UPI app and return here to confirm." 
         });
         
-        // For demo purposes, simulate successful payment
+        // Track when user returns from UPI app
+        let hasReturnedFromUPI = false;
+        
+        const handleVisibilityChange = () => {
+          if (!document.hidden && hasReturnedFromUPI) {
+            // User returned from UPI app
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            setPaymentStep('confirm');
+          }
+        };
+        
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        // Open UPI app
+        window.location.href = upiUrl;
+        hasReturnedFromUPI = true;
+        
+        // Fallback timeout in case visibility API doesn't work
         setTimeout(() => {
-          setPaymentStep('success');
-          setTimeout(() => {
-            onDonate(donationAmount);
-            setPaymentStep('amount');
-            setIsProcessing(false);
-          }, 2000);
-        }, 1500);
+          if (paymentStep === 'processing') {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            setPaymentStep('confirm');
+          }
+        }, 5000);
+        
+      } else {
+        // On desktop, provide UPI link for mobile scanning
+        toast({ 
+          title: "UPI Payment Link Generated", 
+          description: "Use your mobile device to complete the payment." 
+        });
+        
+        setPaymentStep('confirm');
       }
       
     } catch (error) {
@@ -145,10 +136,30 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       
       toast({ 
         title: "UPI Payment Failed", 
-        description: `Error: ${errorMessage}. Please verify UPI ID: sushmanth1106@okhdfcbank`, 
+        description: `Error: ${errorMessage}. Please try again.`, 
         variant: "destructive" 
       });
       
+      setPaymentStep('amount');
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaymentConfirm = (success: boolean) => {
+    if (success) {
+      setPaymentStep('success');
+      setTimeout(() => {
+        onDonate(parseInt(amount));
+        setPaymentStep('amount');
+        setIsProcessing(false);
+        setAmount('');
+      }, 2000);
+    } else {
+      toast({ 
+        title: "Payment Cancelled", 
+        description: "No worries! You can try again anytime.", 
+        variant: "default" 
+      });
       setPaymentStep('amount');
       setIsProcessing(false);
     }
@@ -174,6 +185,63 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
   };
 
   if (!campaign) return null;
+
+  if (paymentStep === 'confirm') {
+    return (
+      <div className="space-y-6 p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={32} className="text-white" />
+          </div>
+          <h3 className="font-bold text-lg mb-2">Confirm Payment Status</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Did you complete the payment of ₹{amount} to sushmanth1106@okhdfcbank?
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <CreditCard size={16} className="text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-blue-800 dark:text-blue-200">Payment Details</p>
+              <p className="text-xs text-blue-600 dark:text-blue-300">UPI ID: sushmanth1106@okhdfcbank</p>
+            </div>
+          </div>
+          <div className="text-sm text-blue-700 dark:text-blue-300">
+            Amount: ₹{amount} • Campaign: {campaign?.title}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => handlePaymentConfirm(false)}
+            className="flex-1 text-sm rounded-xl"
+          >
+            Payment Failed
+          </Button>
+          <Button 
+            onClick={() => handlePaymentConfirm(true)}
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-sm rounded-xl"
+          >
+            Payment Successful
+          </Button>
+        </div>
+        
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
+          <div className="flex items-start gap-2">
+            <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Please confirm only after completing the actual UPI payment in your app.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (paymentStep === 'processing') {
     return (
