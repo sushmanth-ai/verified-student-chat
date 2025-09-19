@@ -72,16 +72,25 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       const upiId = "sushmanth1106@okhdfcbank";
       const payeeName = "Campus Media Fund";
       const transactionNote = `Donation for ${campaign?.title || 'Campaign'}`;
-      
+
       // Validate UPI ID format
       if (!validateUPIId(upiId)) {
         throw new Error('Invalid UPI ID format');
       }
-      
-      // Generate UPI payment link - using standard format for better compatibility
-      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
-      
-      console.log('Generated UPI URL:', upiUrl);
+
+      // Generate robust UPI payment link with transaction reference (improves compatibility)
+      const tr = `CM${Date.now()}`; // unique transaction reference
+      const baseParams =
+        `pa=${encodeURIComponent(upiId)}` +
+        `&pn=${encodeURIComponent(payeeName)}` +
+        `&am=${encodeURIComponent(String(donationAmount))}` +
+        `&cu=INR` +
+        `&tn=${encodeURIComponent(transactionNote)}` +
+        `&tr=${encodeURIComponent(tr)}`;
+      const upiUrl = `upi://pay?${baseParams}`;
+      const intentUrl = `intent://pay?${baseParams}#Intent;scheme=upi;end`;
+
+      console.log('Generated UPI URL:', upiUrl, '\nTR:', tr);
       console.log('UPI ID:', upiId);
       console.log('Amount:', donationAmount);
       
@@ -108,9 +117,18 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
-        // Open UPI app
+        // Open UPI app (standard UPI deep link)
         window.location.href = upiUrl;
         hasReturnedFromUPI = true;
+
+        // Android fallback: if app chooser didn't open, try intent scheme
+        if (/Android/i.test(navigator.userAgent)) {
+          setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+              window.location.href = intentUrl;
+            }
+          }, 600);
+        }
         
         // Fallback timeout in case visibility API doesn't work
         setTimeout(() => {
@@ -174,7 +192,8 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     const upiId = "sushmanth1106@okhdfcbank";
     const payeeName = "Campus Media Fund";
     const transactionNote = `Donation for ${campaign.title}`;
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+    const tr = `CM${Date.now()}`;
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(String(donationAmount))}&cu=INR&tn=${encodeURIComponent(transactionNote)}&tr=${encodeURIComponent(tr)}`;
     
     navigator.clipboard.writeText(upiUrl).then(() => {
       toast({ 
