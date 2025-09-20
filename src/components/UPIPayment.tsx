@@ -63,7 +63,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
 
     try {
       // Generate UPI payment link
-      const upiId = "campusmedia@upi"; // Replace with your actual UPI ID
+      const upiId = "sushmanth1106@okhdfcbank"; // UPI ID for receiving donations
       const payeeName = "Campus Media Fund";
       const transactionNote = `Donation for ${campaign?.title}`;
       
@@ -127,7 +127,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     const donationAmount = parseInt(amount);
     if (!donationAmount) return;
     
-    const upiId = "campusmedia@upi";
+    const upiId = "sushmanth1106@okhdfcbank";
     const payeeName = "Campus Media Fund";
     const transactionNote = `Donation for ${campaign.title}`;
     const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
