@@ -36,7 +36,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || (!content.trim() && !caption.trim())) return;
+    if (!user) return;
 
     setLoading(true);
     try {
@@ -196,7 +196,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ onStoryCreated }) => {
             </div>
             <Button 
               type="submit" 
-              disabled={(!content.trim() && !caption.trim()) || loading}
+              disabled={loading}
               className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
             >
               {loading ? (

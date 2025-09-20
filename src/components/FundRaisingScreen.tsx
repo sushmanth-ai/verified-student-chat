@@ -1,0 +1,498 @@
+import React, { useState, useEffect } from 'react';
+import { Heart, Search, Filter, Plus, TrendingUp, Target, Users, Clock } from 'lucide-react';
+import { collection, addDoc, onSnapshot, query, orderBy, limit, doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Progress } from './ui/progress';
+import { Badge } from './ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { useToast } from '../hooks/use-toast';
+
+interface Campaign {
+  id: string;
+  title: string;
+  description: string;
+  goalAmount: number;
+  raisedAmount: number;
+  category: string;
+  imageUrl?: string;
+  createdBy: string;
+  creatorName: string;
+  creatorPhoto?: string;
+  createdAt: any;
+  likes: string[];
+  donations: number;
+}
+
+const FundRaisingScreen = () => {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [filteredCampaigns, setFilteredCampaigns] = useState<Campaign[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [showDonationModal, setShowDonationModal] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const categories = ['all', 'education', 'health', 'events', 'emergencies', 'sports', 'clubs', 'environment'];
+
+  useEffect(() => {
+    const q = query(collection(db, 'campaigns'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const campaignData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Campaign[];
+      setCampaigns(campaignData);
+      setFilteredCampaigns(campaignData);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    let filtered = campaigns;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(campaign => 
+        campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(campaign => campaign.category === selectedCategory);
+    }
+    
+    setFilteredCampaigns(filtered);
+  }, [campaigns, searchTerm, selectedCategory]);
+
+  const handleLike = async (campaignId: string) => {
+    if (!user) return;
+    
+    const campaignRef = doc(db, 'campaigns', campaignId);
+    const campaign = campaigns.find(c => c.id === campaignId);
+    
+    if (campaign?.likes.includes(user.uid)) {
+      const updatedLikes = campaign.likes.filter(id => id !== user.uid);
+      await updateDoc(campaignRef, { likes: updatedLikes });
+    } else {
+      await updateDoc(campaignRef, { likes: arrayUnion(user.uid) });
+    }
+  };
+
+  const handleDonate = async (amount: number) => {
+    if (!user || !selectedCampaign) return;
+    
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const campaignRef = doc(db, 'campaigns', selectedCampaign.id);
+      await updateDoc(campaignRef, { 
+        raisedAmount: increment(amount),
+        donations: increment(1)
+      });
+      
+      // Add donation record
+      await addDoc(collection(db, 'campaigns', selectedCampaign.id, 'donations'), {
+        donorId: user.uid,
+        donorName: user.displayName || 'Anonymous',
+        amount,
+        timestamp: new Date(),
+        message: 'Thank you for this amazing initiative!'
+      });
+      
+      toast({ title: "Donation Successful!", description: `₹${amount} donated successfully` });
+      setShowDonationModal(false);
+      setSelectedCampaign(null);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to process donation", variant: "destructive" });
+    }
+  };
+
+  const topCampaigns = [...campaigns]
+    .sort((a, b) => (b.raisedAmount / b.goalAmount) - (a.raisedAmount / a.goalAmount))
+    .slice(0, 3);
+
+  return (
+    <div className="flex flex-col h-full bg-gradient-to-br from-background via-secondary/30 to-accent/20 dark:from-background dark:via-primary/5 dark:to-secondary/10">
+      {/* Header */}
+      <div className="p-4 bg-card/80 backdrop-blur-sm border-b border-border/50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Fund Raising
+            </h2>
+            <p className="text-sm text-muted-foreground">Support campus initiatives</p>
+          </div>
+          <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg">
+                <Plus size={16} className="mr-2" />
+                Start Campaign
+              </Button>
+            </DialogTrigger>
+            <CreateCampaignModal onClose={() => setShowCreateModal(false)} />
+          </Dialog>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search campaigns..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-xl bg-secondary/50 border-border/50"
+            />
+          </div>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-32 rounded-xl bg-secondary/50 border-border/50">
+              <Filter size={16} className="mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* Top Campaigns */}
+        {topCampaigns.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp size={20} className="text-orange-500" />
+              <h3 className="font-semibold text-lg">Top Campaigns</h3>
+            </div>
+            <div className="grid gap-3">
+              {topCampaigns.map(campaign => (
+                <div key={campaign.id} className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-800/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm">{campaign.title}</h4>
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
+                      #{Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)}%
+                    </Badge>
+                  </div>
+                  <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>₹{campaign.raisedAmount.toLocaleString()}</span>
+                    <span>₹{campaign.goalAmount.toLocaleString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* All Campaigns */}
+        <div>
+          <h3 className="font-semibold text-lg mb-3">All Campaigns</h3>
+          <div className="space-y-4">
+            {filteredCampaigns.map(campaign => (
+              <CampaignCard 
+                key={campaign.id}
+                campaign={campaign}
+                onLike={() => handleLike(campaign.id)}
+                onDonate={() => {
+                  setSelectedCampaign(campaign);
+                  setShowDonationModal(true);
+                }}
+                isLiked={campaign.likes.includes(user?.uid || '')}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Donation Modal */}
+      <Dialog open={showDonationModal} onOpenChange={setShowDonationModal}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Make a Donation</DialogTitle>
+          </DialogHeader>
+          <DonationModal 
+            campaign={selectedCampaign}
+            onDonate={handleDonate}
+            onClose={() => setShowDonationModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// Campaign Card Component
+const CampaignCard = ({ campaign, onLike, onDonate, isLiked }: {
+  campaign: Campaign;
+  onLike: () => void;
+  onDonate: () => void;
+  isLiked: boolean;
+}) => {
+  const progressPercentage = (campaign.raisedAmount / campaign.goalAmount) * 100;
+  
+  return (
+    <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200">
+      {/* Campaign Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/30 rounded-full flex items-center justify-center">
+            <span className="text-sm font-semibold text-primary">
+              {campaign.creatorName[0]}
+            </span>
+          </div>
+          <div>
+            <p className="font-medium text-sm">{campaign.creatorName}</p>
+            <p className="text-xs text-muted-foreground">
+              {new Date(campaign.createdAt?.toDate()).toLocaleDateString()}
+            </p>
+          </div>
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {campaign.category}
+        </Badge>
+      </div>
+
+      {/* Campaign Content */}
+      <div className="space-y-3">
+        <div>
+          <h3 className="font-semibold text-lg mb-2">{campaign.title}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">{campaign.description}</p>
+        </div>
+
+        {/* Progress */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-sm">
+            <span className="font-medium">₹{campaign.raisedAmount.toLocaleString()}</span>
+            <span className="text-muted-foreground">₹{campaign.goalAmount.toLocaleString()}</span>
+          </div>
+          <Progress value={Math.min(progressPercentage, 100)} className="h-2" />
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Users size={12} />
+              {campaign.donations} donors
+            </span>
+            <span>{Math.round(progressPercentage)}% funded</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onLike}
+              className={`flex items-center gap-1 text-sm transition-colors ${
+                isLiked ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+              }`}
+            >
+              <Heart size={16} className={isLiked ? 'fill-current' : ''} />
+              {campaign.likes.length}
+            </button>
+          </div>
+          <Button
+            onClick={onDonate}
+            size="sm"
+            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg px-4"
+          >
+            Donate Now
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Create Campaign Modal Component
+const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    goalAmount: '',
+    category: 'education'
+  });
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    try {
+      await addDoc(collection(db, 'campaigns'), {
+        ...formData,
+        goalAmount: parseInt(formData.goalAmount),
+        raisedAmount: 0,
+        createdBy: user.uid,
+        creatorName: user.displayName || 'Anonymous',
+        creatorPhoto: user.photoURL,
+        createdAt: new Date(),
+        likes: [],
+        donations: 0
+      });
+
+      toast({ title: "Campaign Created!", description: "Your campaign is now live" });
+      onClose();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to create campaign", variant: "destructive" });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <Label htmlFor="title">Campaign Title</Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) => setFormData({...formData, title: e.target.value})}
+          placeholder="Help build a new library..."
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({...formData, description: e.target.value})}
+          placeholder="Tell people about your campaign..."
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="goalAmount">Goal Amount (₹)</Label>
+        <Input
+          id="goalAmount"
+          type="number"
+          value={formData.goalAmount}
+          onChange={(e) => setFormData({...formData, goalAmount: e.target.value})}
+          placeholder="50000"
+          required
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="category">Category</Label>
+        <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="education">Education</SelectItem>
+            <SelectItem value="health">Health</SelectItem>
+            <SelectItem value="events">Events</SelectItem>
+            <SelectItem value="emergencies">Emergencies</SelectItem>
+            <SelectItem value="sports">Sports</SelectItem>
+            <SelectItem value="clubs">Clubs</SelectItem>
+            <SelectItem value="environment">Environment</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
+      <div className="flex gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+          Cancel
+        </Button>
+        <Button type="submit" className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600">
+          Create Campaign
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+// Donation Modal Component
+const DonationModal = ({ campaign, onDonate, onClose }: {
+  campaign: Campaign | null;
+  onDonate: (amount: number) => void;
+  onClose: () => void;
+}) => {
+  const [amount, setAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const quickAmounts = [100, 500, 1000, 2000, 5000];
+
+  const handleDonate = async () => {
+    const donationAmount = parseInt(amount);
+    if (!donationAmount || donationAmount < 1) return;
+
+    setIsProcessing(true);
+    await onDonate(donationAmount);
+    setIsProcessing(false);
+  };
+
+  if (!campaign) return null;
+
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h3 className="font-semibold mb-1">{campaign.title}</h3>
+        <p className="text-sm text-muted-foreground">by {campaign.creatorName}</p>
+      </div>
+
+      <div className="bg-secondary/50 rounded-lg p-3">
+        <div className="flex justify-between text-sm mb-2">
+          <span>Raised: ₹{campaign.raisedAmount.toLocaleString()}</span>
+          <span>Goal: ₹{campaign.goalAmount.toLocaleString()}</span>
+        </div>
+        <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
+      </div>
+
+      <div>
+        <Label htmlFor="amount">Donation Amount (₹)</Label>
+        <Input
+          id="amount"
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="Enter amount"
+          className="mt-1"
+        />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {quickAmounts.map(quickAmount => (
+          <Button
+            key={quickAmount}
+            type="button"
+            variant="outline"
+            onClick={() => setAmount(quickAmount.toString())}
+            className="text-xs"
+          >
+            ₹{quickAmount}
+          </Button>
+        ))}
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleDonate}
+          disabled={!amount || isProcessing}
+          className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600"
+        >
+          {isProcessing ? 'Processing...' : 'Donate Now'}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export default FundRaisingScreen;
