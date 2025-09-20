@@ -28,3 +28,17 @@ googleProvider.addScope('profile');
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
+
+// Test Firebase Storage connection
+export const testStorageConnection = async () => {
+  try {
+    const testRef = ref(storage, 'test/connection.txt');
+    const testData = 'Firebase Storage connection test';
+    await uploadString(testRef, testData);
+    console.log('Firebase Storage connection successful');
+    return true;
+  } catch (error) {
+    console.error('Firebase Storage connection failed:', error);
+    return false;
+  }
+};

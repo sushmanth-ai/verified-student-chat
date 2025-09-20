@@ -6,7 +6,7 @@ import { Camera, X, Sparkles, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, storage } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { useToast } from '../hooks/use-toast';
 
 interface CreatePostProps {
@@ -31,14 +31,28 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
           description: "Please select an image smaller than 10MB", 
           variant: "destructive" 
         });
+        e.target.value = ''; // Reset input
         return;
       }
       
+      // Validate file type
       if (file.type.startsWith('image/')) {
         setSelectedFile(file);
-        toast({ title: "Photo selected!", description: `${file.name} ready to upload` });
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = () => {
+          console.log('File selected and preview ready:', file.name);
+        };
+        reader.readAsDataURL(file);
+        
+        toast({ 
+          title: "Photo selected!", 
+          description: `${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) ready to upload` 
+        });
       } else {
         toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+        e.target.value = ''; // Reset input
       }
     }
   };
@@ -60,13 +74,41 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
       };
 
       if (selectedFile) {
-        const path = `posts/${user.uid}/${Date.now()}-${selectedFile.name}`;
-        const imageRef = ref(storage, path);
-        await uploadBytes(imageRef, selectedFile, { contentType: selectedFile.type });
-        const imageUrl = await getDownloadURL(imageRef);
-        postData.hasImage = true;
-        postData.imageName = selectedFile.name;
-        postData.imageUrl = imageUrl;
+        try {
+          // Create a unique filename
+          const timestamp = Date.now();
+          const fileName = `${timestamp}-${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const imagePath = `posts/${user.uid}/${fileName}`;
+          const imageRef = ref(storage, imagePath);
+          
+          // Upload the file
+          const uploadResult = await uploadBytes(imageRef, selectedFile);
+          console.log('Upload successful:', uploadResult);
+          
+          // Get the download URL
+          const imageUrl = await getDownloadURL(imageRef);
+          console.log('Download URL:', imageUrl);
+          
+          postData.hasImage = true;
+          postData.imageName = selectedFile.name;
+          postData.imageUrl = imageUrl;
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          
+          // Fallback: Convert to base64 and store directly
+          const reader = new FileReader();
+          const base64Data = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(selectedFile);
+          });
+          
+          postData.hasImage = true;
+          postData.imageName = selectedFile.name;
+          postData.imageData = base64Data;
+          
+          console.log('Using base64 fallback for image');
+        }
       }
 
       await addDoc(collection(db, 'posts'), postData);

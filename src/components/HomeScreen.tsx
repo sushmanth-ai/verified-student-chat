@@ -523,7 +523,19 @@ const HomeScreen = () => {
                     <img 
                       src={post.imageUrl || post.imageData} 
                       alt={post.imageName || 'Post image'} 
-                      className="w-full h-auto max-h-96 object-cover"
+                      className="w-full h-auto max-h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
+                      onClick={() => {
+                        // Open image in new tab for full view
+                        const imageUrl = post.imageUrl || post.imageData;
+                        if (imageUrl) {
+                          window.open(imageUrl, '_blank');
+                        }
+                      }}
+                      onError={(e) => {
+                        console.error('Image failed to load:', post.imageUrl || post.imageData);
+                        // Hide the image if it fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   </div>
                 )}
