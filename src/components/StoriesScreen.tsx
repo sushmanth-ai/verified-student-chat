@@ -5,7 +5,6 @@ import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, where, deleteDoc, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useToast } from '../hooks/use-toast';
 import CreateStory from './CreateStory';
-import StoryViewer from './StoryViewer';
 import { Button } from './ui/button';
 
 interface Story {
@@ -25,8 +24,6 @@ interface Story {
 const StoriesScreen = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showViewer, setShowViewer] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -94,12 +91,6 @@ const StoriesScreen = () => {
     }
   };
 
-  const handleStoryClick = (index: number) => {
-    setSelectedIndex(index);
-    setShowViewer(true);
-    handleViewStory(stories[index].id);
-  };
-
   const getTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Just now';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -117,19 +108,19 @@ const StoriesScreen = () => {
 
   if (loading) {
     return (
-      <div className="h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20 flex items-center justify-center">
+      <div className="h-full bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-purple-500 border-r-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300 font-medium">Loading stories...</p>
+          <p className="text-gray-600 font-medium">Loading stories...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
+    <div className="h-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Create Story Section */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 p-6 shadow-lg">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 p-6 shadow-lg">
         <CreateStory onStoryCreated={() => {}} />
       </div>
 
@@ -146,21 +137,21 @@ const StoriesScreen = () => {
         
         {stories.length === 0 ? (
           <div className="text-center py-12">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20">
+            <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
               <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Sparkles size={32} className="text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">No active stories</h3>
-              <p className="text-gray-600 dark:text-gray-400">Be the first to create one!</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">No active stories</h3>
+              <p className="text-gray-600">Be the first to create one!</p>
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {stories.map((story, index) => (
+            {stories.map((story) => (
               <div
                 key={story.id}
-                onClick={() => handleStoryClick(index)}
-                className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl overflow-hidden shadow-xl border border-white/20 dark:border-gray-700/20 hover:shadow-2xl transition-all duration-300 cursor-pointer group relative hover:scale-105"
+                onClick={() => handleViewStory(story.id)}
+                className="bg-white/90 backdrop-blur-sm rounded-3xl overflow-hidden shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 cursor-pointer group relative hover:scale-105"
               >
                 {/* Delete button for own stories */}
                 {story.authorId === user?.uid && (
@@ -221,17 +212,17 @@ const StoriesScreen = () => {
                 </div>
 
                 {/* Story Info */}
-                <div className="p-4 bg-gradient-to-r from-gray-50/80 to-blue-50/80 dark:from-gray-700/80 dark:to-blue-900/80">
-                  <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate mb-1">{story.authorName}</h3>
+                <div className="p-4 bg-gradient-to-r from-gray-50/80 to-blue-50/80">
+                  <h3 className="font-bold text-gray-900 text-sm truncate mb-1">{story.authorName}</h3>
                   {story.caption && story.content && (
-                    <p className="text-gray-600 dark:text-gray-300 text-xs truncate mb-2">{story.caption}</p>
+                    <p className="text-gray-600 text-xs truncate mb-2">{story.caption}</p>
                   )}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-1 bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded-full">
-                      <Eye size={12} className="text-purple-600 dark:text-purple-400" />
-                      <span className="text-purple-700 dark:text-purple-300 text-xs font-medium">{story.views.length}</span>
+                    <div className="flex items-center space-x-1 bg-purple-100 px-2 py-1 rounded-full">
+                      <Eye size={12} className="text-purple-600" />
+                      <span className="text-purple-700 text-xs font-medium">{story.views.length}</span>
                     </div>
-                    <span className="text-gray-400 dark:text-gray-500 text-xs">{getTimeAgo(story.createdAt)}</span>
+                    <span className="text-gray-400 text-xs">{getTimeAgo(story.createdAt)}</span>
                   </div>
                 </div>
               </div>
@@ -240,8 +231,8 @@ const StoriesScreen = () => {
         )}
 
         {/* Story Stats */}
-        <div className="mt-8 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-3xl p-6 border border-white/30 dark:border-gray-700/30 shadow-xl">
-          <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-6 text-lg flex items-center">
+        <div className="mt-8 bg-white/90 backdrop-blur-sm rounded-3xl p-6 border border-white/30 shadow-xl">
+          <h3 className="font-bold text-gray-900 mb-6 text-lg flex items-center">
             <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center mr-2">
               <Sparkles size={16} className="text-white" />
             </div>
@@ -252,36 +243,26 @@ const StoriesScreen = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
                 <Sparkles size={24} className="text-white" />
               </div>
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stories.length}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Active Stories</div>
+              <div className="text-2xl font-bold text-blue-600">{stories.length}</div>
+              <div className="text-xs text-gray-500 font-medium">Active Stories</div>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
                 <User size={24} className="text-white" />
               </div>
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stories.filter(s => s.authorId === user?.uid).length}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Your Stories</div>
+              <div className="text-2xl font-bold text-purple-600">{stories.filter(s => s.authorId === user?.uid).length}</div>
+              <div className="text-xs text-gray-500 font-medium">Your Stories</div>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-lg">
                 <Eye size={24} className="text-white" />
               </div>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stories.reduce((acc, story) => acc + story.views.length, 0)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Total Views</div>
+              <div className="text-2xl font-bold text-green-600">{stories.reduce((acc, story) => acc + story.views.length, 0)}</div>
+              <div className="text-xs text-gray-500 font-medium">Total Views</div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Story Viewer */}
-      {showViewer && (
-        <StoryViewer
-          stories={stories}
-          initialIndex={selectedIndex}
-          onClose={() => setShowViewer(false)}
-          onStoryView={handleViewStory}
-        />
-      )}
     </div>
   );
 };

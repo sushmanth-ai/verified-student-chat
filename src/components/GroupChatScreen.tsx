@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { useToast } from '../hooks/use-toast';
 import CreateGroupModal from './CreateGroupModal';
 import GroupChat from './GroupChat';
-import GroupJoinRequests from './GroupJoinRequests';
 
 interface ChatGroup {
   id: string;
@@ -69,26 +68,28 @@ const GroupChatScreen = () => {
     if (!user) return;
 
     try {
-      // Create a join request instead of directly adding to members
-      await addDoc(collection(db, 'groupJoinRequests'), {
-        groupId,
-        groupName,
-        userId: user.uid,
-        userName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
-        userEmail: user.email,
-        requestedAt: serverTimestamp(),
-        status: 'pending'
+      await updateDoc(doc(db, 'chatGroups', groupId), {
+        members: arrayUnion(user.uid)
       });
 
       toast({ 
-        title: "Join request sent!", 
-        description: `Your request to join ${groupName} has been sent to the admin for approval.` 
+        title: "Joined group!", 
+        description: `You joined ${groupName}` 
       });
+
+      // Auto-navigate to the group chat
+      const joinedGroup = allGroups.find(g => g.id === groupId);
+      if (joinedGroup) {
+        setSelectedGroup({ ...joinedGroup, members: [...joinedGroup.members, user.uid] });
+      }
+      
+      // Switch to myGroups tab after joining
+      setActiveTab('myGroups');
     } catch (error) {
-      console.error('Error sending join request:', error);
+      console.error('Error joining group:', error);
       toast({ 
         title: "Error", 
-        description: "Failed to send join request", 
+        description: "Failed to join group", 
         variant: "destructive" 
       });
     }
@@ -241,9 +242,6 @@ const GroupChatScreen = () => {
               )}
             </div>
             
-            {/* Group Join Requests - only show for group admins */}
-            <GroupJoinRequests userGroups={myGroups} />
-            
             {filteredMyGroups.length === 0 ? (
               <div className="text-center py-12">
                 <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/20">
@@ -382,14 +380,14 @@ const GroupChatScreen = () => {
                           </span>
                         </div>
                         
-                          <Button
-                            size="sm"
-                            className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl shadow-md"
-                            onClick={() => handleJoinGroup(group.id, group.name)}
-                          >
-                            <Plus size={16} className="mr-2" />
-                            Request to Join
-                          </Button>
+                        <Button
+                          size="sm"
+                          className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl shadow-md"
+                          onClick={() => handleJoinGroup(group.id, group.name)}
+                        >
+                          <Plus size={16} className="mr-2" />
+                          Join Group
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

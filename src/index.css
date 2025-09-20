@@ -92,35 +92,21 @@
     @apply bg-background text-foreground font-sans antialiased transition-colors duration-300;
   }
 
-  /* Enhanced Dark mode styles */
-  .dark {
-    background: linear-gradient(135deg, hsl(220, 25%, 5%) 0%, hsl(230, 30%, 8%) 25%, hsl(240, 35%, 12%) 50%, hsl(250, 40%, 15%) 75%, hsl(260, 45%, 18%) 100%);
-  }
-
+  /* Dark mode styles */
   .dark body {
-    background: linear-gradient(135deg, hsl(220, 25%, 5%) 0%, hsl(230, 30%, 8%) 25%, hsl(240, 35%, 12%) 50%, hsl(250, 40%, 15%) 75%, hsl(260, 45%, 18%) 100%);
+    background: linear-gradient(135deg, hsl(220, 15%, 8%) 0%, hsl(230, 20%, 10%) 50%, hsl(240, 25%, 12%) 100%);
   }
 
   .dark .bg-gradient-to-br {
-    background: linear-gradient(135deg, hsl(220, 30%, 8%) 0%, hsl(230, 35%, 10%) 25%, hsl(240, 40%, 12%) 50%, hsl(250, 45%, 14%) 75%, hsl(260, 50%, 16%) 100%) !important;
+    background: linear-gradient(135deg, hsl(220, 15%, 12%) 0%, hsl(230, 20%, 14%) 50%, hsl(240, 25%, 16%) 100%) !important;
   }
 
   .dark .bg-white\/80 {
-    background: hsl(220, 25%, 10% / 0.95) !important;
-    backdrop-filter: blur(16px);
-    border: 1px solid hsl(220, 30%, 20% / 0.6) !important;
+    background: hsl(220, 15%, 15% / 0.9) !important;
   }
 
   .dark .bg-white\/90 {
-    background: hsl(220, 25%, 12% / 0.98) !important;
-    backdrop-filter: blur(20px);
-    border: 1px solid hsl(220, 30%, 25% / 0.7) !important;
-  }
-
-  .dark .bg-white\/95 {
-    background: hsl(220, 25%, 14% / 0.99) !important;
-    backdrop-filter: blur(24px);
-    border: 1px solid hsl(220, 30%, 30% / 0.8) !important;
+    background: hsl(220, 15%, 16% / 0.95) !important;
   }
 
   .dark .text-gray-800 {
@@ -128,126 +114,31 @@
   }
 
   .dark .text-gray-600 {
-    color: hsl(220, 15%, 70%) !important;
+    color: hsl(0, 0%, 70%) !important;
   }
 
   .dark .text-gray-700 {
-    color: hsl(220, 15%, 80%) !important;
+    color: hsl(0, 0%, 80%) !important;
   }
 
   .dark .text-gray-500 {
-    color: hsl(220, 15%, 65%) !important;
-  }
-
-  .dark .text-gray-900 {
-    color: hsl(0, 0%, 98%) !important;
+    color: hsl(0, 0%, 60%) !important;
   }
 
   .dark .border-white\/20 {
-    border-color: hsl(220, 30%, 20% / 0.5) !important;
+    border-color: hsl(220, 15%, 25% / 0.3) !important;
   }
 
   .dark .border-white\/30 {
-    border-color: hsl(220, 30%, 25% / 0.6) !important;
+    border-color: hsl(220, 15%, 30% / 0.4) !important;
   }
 
   .dark .bg-gray-50 {
-    background: hsl(220, 25%, 16%) !important;
+    background: hsl(220, 15%, 16%) !important;
   }
 
   .dark .bg-gray-100 {
-    background: hsl(220, 25%, 20%) !important;
-  }
-
-  .dark .bg-gray-200 {
-    background: hsl(220, 25%, 24%) !important;
-  }
-
-  /* Enhanced dark mode card and glass effects */
-  .dark .bg-white\/10 {
-    background: hsl(220, 30%, 12% / 0.8) !important;
-    backdrop-filter: blur(24px);
-    border: 1px solid hsl(220, 35%, 25% / 0.4) !important;
-  }
-
-  .dark .shadow-xl {
-    box-shadow: 0 25px 50px -12px hsl(220, 40%, 3% / 0.9), 0 15px 25px -5px hsl(220, 40%, 3% / 0.6) !important;
-  }
-
-  .dark .shadow-lg {
-    box-shadow: 0 15px 25px -5px hsl(220, 35%, 4% / 0.8), 0 8px 15px -3px hsl(220, 35%, 4% / 0.5) !important;
-  }
-
-  .dark .shadow-2xl {
-    box-shadow: 0 35px 60px -12px hsl(220, 45%, 2% / 0.95), 0 20px 35px -8px hsl(220, 45%, 2% / 0.7) !important;
-  }
-
-  /* Enhanced gradient backgrounds for dark mode */
-  .dark .bg-gradient-to-r {
-    background: linear-gradient(to right, var(--tw-gradient-stops)) !important;
-  }
-
-  .dark .from-blue-500 {
-    --tw-gradient-from: hsl(217, 91%, 45%) !important;
-  }
-
-  .dark .to-purple-600 {
-    --tw-gradient-to: hsl(271, 81%, 50%) !important;
-  }
-
-  .dark .from-purple-500 {
-    --tw-gradient-from: hsl(271, 81%, 45%) !important;
-  }
-
-  .dark .to-pink-500 {
-    --tw-gradient-to: hsl(330, 81%, 50%) !important;
-  }
-
-  /* Enhanced input and form elements for dark mode */
-  .dark input,
-  .dark textarea {
-    background: hsl(220, 25%, 15% / 0.9) !important;
-    border-color: hsl(220, 30%, 25% / 0.6) !important;
-    color: hsl(0, 0%, 95%) !important;
-  }
-
-  .dark input::placeholder,
-  .dark textarea::placeholder {
-    color: hsl(220, 15%, 60%) !important;
-  }
-
-  .dark input:focus,
-  .dark textarea:focus {
-    background: hsl(220, 25%, 18% / 0.95) !important;
-    border-color: hsl(217, 91%, 50%) !important;
-    box-shadow: 0 0 0 3px hsl(217, 91%, 50% / 0.2) !important;
-  }
-
-  /* Enhanced button styles for dark mode */
-  .dark button {
-    transition: all 0.2s ease-in-out;
-  }
-
-  .dark button:hover {
-    transform: translateY(-1px);
-  }
-
-  /* Enhanced scrollbar for dark mode */
-  .dark ::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .dark ::-webkit-scrollbar-track {
-    background: hsl(220, 25%, 10%);
-  }
-
-  .dark ::-webkit-scrollbar-thumb {
-    background: hsl(220, 30%, 25%);
-    border-radius: 4px;
-  }
-
-  .dark ::-webkit-scrollbar-thumb:hover {
-    background: hsl(220, 30%, 35%);
+    background: hsl(220, 15%, 18%) !important;
   }
 
   input,
@@ -261,49 +152,5 @@
 
   ::selection {
     background-color: hsl(var(--primary) / 0.2);
-  }
-
-  /* Enhanced animations */
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  @keyframes slideInRight {
-    from {
-      opacity: 0;
-      transform: translateX(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out;
-  }
-
-  .animate-slide-in-right {
-    animation: slideInRight 0.4s ease-out;
-  }
-
-  /* Enhanced glass morphism effects */
-  .glass-effect {
-    backdrop-filter: blur(20px);
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .dark .glass-effect {
-    backdrop-filter: blur(24px);
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
