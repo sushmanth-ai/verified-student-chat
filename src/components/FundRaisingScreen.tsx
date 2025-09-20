@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { useToast } from '../hooks/use-toast';
+import { UPIPayment } from './UPIPayment';
 
 interface Campaign {
   id: string;
@@ -91,28 +92,58 @@ const FundRaisingScreen = () => {
     if (!user || !selectedCampaign) return;
     
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Generate UPI payment link
+      const upiId = "campusmedia@upi"; // Replace with your actual UPI ID
+      const payeeName = "Campus Media Fund";
+      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Donation for ${selectedCampaign.title}`)}`;
       
-      const campaignRef = doc(db, 'campaigns', selectedCampaign.id);
-      await updateDoc(campaignRef, { 
-        raisedAmount: increment(amount),
-        donations: increment(1)
-      });
+      // Try to open UPI app
+      try {
+        window.location.href = upiUrl;
+        
+        // Show success message and update campaign (in real app, this should be done after payment confirmation)
+        toast({ 
+          title: "UPI Payment Initiated!", 
+          description: `Opening UPI app for ₹${amount} donation. Complete the payment in your UPI app.` 
+        });
+        
+        // Simulate successful payment after 3 seconds (in real app, use webhooks)
+        setTimeout(async () => {
+          const campaignRef = doc(db, 'campaigns', selectedCampaign.id);
+          await updateDoc(campaignRef, { 
+            raisedAmount: increment(amount),
+            donations: increment(1)
+          });
+          
+          // Add donation record
+          await addDoc(collection(db, 'campaigns', selectedCampaign.id, 'donations'), {
+            donorId: user.uid,
+            donorName: user.displayName || 'Anonymous',
+            amount,
+            timestamp: new Date(),
+            message: 'Thank you for this amazing initiative!',
+            paymentMethod: 'UPI'
+          });
+          
+          toast({ 
+            title: "Donation Successful!", 
+            description: `₹${amount} donated successfully via UPI` 
+          });
+        }, 3000);
+        
+      } catch (error) {
+        // Fallback if UPI app is not available
+        toast({ 
+          title: "UPI App Not Found", 
+          description: "Please install a UPI app like Google Pay, PhonePe, or Paytm to make donations.", 
+          variant: "destructive" 
+        });
+      }
       
-      // Add donation record
-      await addDoc(collection(db, 'campaigns', selectedCampaign.id, 'donations'), {
-        donorId: user.uid,
-        donorName: user.displayName || 'Anonymous',
-        amount,
-        timestamp: new Date(),
-        message: 'Thank you for this amazing initiative!'
-      });
-      
-      toast({ title: "Donation Successful!", description: `₹${amount} donated successfully` });
       setShowDonationModal(false);
       setSelectedCampaign(null);
     } catch (error) {
+      console.error('Error processing donation:', error);
       toast({ title: "Error", description: "Failed to process donation", variant: "destructive" });
     }
   };
@@ -124,17 +155,17 @@ const FundRaisingScreen = () => {
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-background via-secondary/30 to-accent/20 dark:from-background dark:via-primary/5 dark:to-secondary/10">
       {/* Header */}
-      <div className="p-4 bg-card/80 backdrop-blur-sm border-b border-border/50">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+      <div className="p-3 sm:p-4 bg-card/80 backdrop-blur-sm border-b border-border/50">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 gap-3">
+          <div className="flex-1">
+            <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
               Fund Raising
             </h2>
-            <p className="text-sm text-muted-foreground">Support campus initiatives</p>
+            <p className="text-sm text-muted-foreground mt-1">Support campus initiatives</p>
           </div>
           <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
             <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg">
+              <Button className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl shadow-lg w-full sm:w-auto">
                 <Plus size={16} className="mr-2" />
                 Start Campaign
               </Button>
@@ -144,18 +175,18 @@ const FundRaisingScreen = () => {
         </div>
 
         {/* Search and Filter */}
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-3">
           <div className="relative flex-1">
             <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search campaigns..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 rounded-xl bg-secondary/50 border-border/50"
+              className="pl-10 rounded-xl bg-secondary/50 border-border/50 w-full h-10"
             />
           </div>
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-32 rounded-xl bg-secondary/50 border-border/50">
+            <SelectTrigger className="w-full sm:w-44 rounded-xl bg-secondary/50 border-border/50 h-10">
               <Filter size={16} className="mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -170,61 +201,68 @@ const FundRaisingScreen = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Top Campaigns */}
-        {topCampaigns.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp size={20} className="text-orange-500" />
-              <h3 className="font-semibold text-lg">Top Campaigns</h3>
-            </div>
-            <div className="grid gap-3">
-              {topCampaigns.map(campaign => (
-                <div key={campaign.id} className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-800/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-sm">{campaign.title}</h4>
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
-                      #{Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)}%
-                    </Badge>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-3 sm:p-4 space-y-6 sm:space-y-8">
+          {/* Top Campaigns */}
+          {topCampaigns.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp size={18} className="text-orange-500" />
+                <h3 className="font-semibold text-base sm:text-lg">Top Campaigns</h3>
+              </div>
+              <div className="grid gap-3 sm:gap-4">
+                {topCampaigns.map(campaign => (
+                  <div key={campaign.id} className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-3 sm:p-4 border border-orange-200/50 dark:border-orange-800/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-sm sm:text-base line-clamp-2 flex-1 pr-2">{campaign.title}</h4>
+                      <Badge variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 text-xs shrink-0">
+                        {Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)}%
+                      </Badge>
+                    </div>
+                    <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2 sm:h-3 mb-2" />
+                    <div className="flex justify-between text-xs sm:text-sm text-muted-foreground">
+                      <span>₹{campaign.raisedAmount.toLocaleString()}</span>
+                      <span>₹{campaign.goalAmount.toLocaleString()}</span>
+                    </div>
                   </div>
-                  <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>₹{campaign.raisedAmount.toLocaleString()}</span>
-                    <span>₹{campaign.goalAmount.toLocaleString()}</span>
-                  </div>
-                </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* All Campaigns */}
+          <section className="space-y-4">
+            <h3 className="font-semibold text-base sm:text-lg">All Campaigns</h3>
+            <div className="grid gap-4 sm:gap-6">
+              {filteredCampaigns.map(campaign => (
+                <CampaignCard 
+                  key={campaign.id}
+                  campaign={campaign}
+                  onLike={() => handleLike(campaign.id)}
+                  onDonate={() => {
+                    setSelectedCampaign(campaign);
+                    setShowDonationModal(true);
+                  }}
+                  isLiked={campaign.likes.includes(user?.uid || '')}
+                />
               ))}
             </div>
-          </div>
-        )}
-
-        {/* All Campaigns */}
-        <div>
-          <h3 className="font-semibold text-lg mb-3">All Campaigns</h3>
-          <div className="space-y-4">
-            {filteredCampaigns.map(campaign => (
-              <CampaignCard 
-                key={campaign.id}
-                campaign={campaign}
-                onLike={() => handleLike(campaign.id)}
-                onDonate={() => {
-                  setSelectedCampaign(campaign);
-                  setShowDonationModal(true);
-                }}
-                isLiked={campaign.likes.includes(user?.uid || '')}
-              />
-            ))}
-          </div>
+          </section>
         </div>
       </div>
 
       {/* Donation Modal */}
       <Dialog open={showDonationModal} onOpenChange={setShowDonationModal}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[95vw] max-w-sm mx-auto">
           <DialogHeader>
-            <DialogTitle>Make a Donation</DialogTitle>
+            <DialogTitle className="text-center flex items-center justify-center gap-2">
+              <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                <Heart size={14} className="text-white" />
+              </div>
+              Make a Donation via UPI
+            </DialogTitle>
           </DialogHeader>
-          <DonationModal 
+          <UPIPayment 
             campaign={selectedCampaign}
             onDonate={handleDonate}
             onClose={() => setShowDonationModal(false)}
@@ -245,23 +283,23 @@ const CampaignCard = ({ campaign, onLike, onDonate, isLiked }: {
   const progressPercentage = (campaign.raisedAmount / campaign.goalAmount) * 100;
   
   return (
-    <div className="bg-card rounded-xl p-4 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200">
+    <div className="bg-card rounded-xl p-3 sm:p-4 border border-border/50 shadow-sm hover:shadow-md transition-all duration-200">
       {/* Campaign Header */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/30 rounded-full flex items-center justify-center">
-            <span className="text-sm font-semibold text-primary">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-primary/20 to-secondary/30 rounded-full flex items-center justify-center shrink-0">
+            <span className="text-xs sm:text-sm font-semibold text-primary">
               {campaign.creatorName[0]}
             </span>
           </div>
-          <div>
-            <p className="font-medium text-sm">{campaign.creatorName}</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-xs sm:text-sm truncate">{campaign.creatorName}</p>
             <p className="text-xs text-muted-foreground">
               {new Date(campaign.createdAt?.toDate()).toLocaleDateString()}
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="outline" className="text-xs shrink-0 ml-2">
           {campaign.category}
         </Badge>
       </div>
@@ -269,7 +307,7 @@ const CampaignCard = ({ campaign, onLike, onDonate, isLiked }: {
       {/* Campaign Content */}
       <div className="space-y-3">
         <div>
-          <h3 className="font-semibold text-lg mb-2">{campaign.title}</h3>
+          <h3 className="font-semibold text-base sm:text-lg mb-2 line-clamp-2">{campaign.title}</h3>
           <p className="text-sm text-muted-foreground line-clamp-2">{campaign.description}</p>
         </div>
 
@@ -299,15 +337,16 @@ const CampaignCard = ({ campaign, onLike, onDonate, isLiked }: {
               }`}
             >
               <Heart size={16} className={isLiked ? 'fill-current' : ''} />
-              {campaign.likes.length}
+              <span className="hidden sm:inline">{campaign.likes.length}</span>
+              <span className="sm:hidden">{campaign.likes.length > 0 && campaign.likes.length}</span>
             </button>
           </div>
           <Button
             onClick={onDonate}
             size="sm"
-            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg px-4"
+            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-lg px-3 sm:px-4 text-xs sm:text-sm"
           >
-            Donate Now
+            Donate
           </Button>
         </div>
       </div>
@@ -351,147 +390,73 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="title">Campaign Title</Label>
-        <Input
-          id="title"
-          value={formData.title}
-          onChange={(e) => setFormData({...formData, title: e.target.value})}
-          placeholder="Help build a new library..."
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={formData.description}
-          onChange={(e) => setFormData({...formData, description: e.target.value})}
-          placeholder="Tell people about your campaign..."
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="goalAmount">Goal Amount (₹)</Label>
-        <Input
-          id="goalAmount"
-          type="number"
-          value={formData.goalAmount}
-          onChange={(e) => setFormData({...formData, goalAmount: e.target.value})}
-          placeholder="50000"
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="category">Category</Label>
-        <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="education">Education</SelectItem>
-            <SelectItem value="health">Health</SelectItem>
-            <SelectItem value="events">Events</SelectItem>
-            <SelectItem value="emergencies">Emergencies</SelectItem>
-            <SelectItem value="sports">Sports</SelectItem>
-            <SelectItem value="clubs">Clubs</SelectItem>
-            <SelectItem value="environment">Environment</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="flex gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-          Cancel
-        </Button>
-        <Button type="submit" className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600">
-          Create Campaign
-        </Button>
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-6 p-1">
+        <div className="space-y-2">
+          <Label htmlFor="title" className="text-sm font-medium">Campaign Title</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+            placeholder="Help build a new library..."
+            className="w-full"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+            placeholder="Tell people about your campaign..."
+            className="w-full min-h-[100px] resize-none"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="goalAmount" className="text-sm font-medium">Goal Amount (₹)</Label>
+          <Input
+            id="goalAmount"
+            type="number"
+            value={formData.goalAmount}
+            onChange={(e) => setFormData({...formData, goalAmount: e.target.value})}
+            placeholder="50000"
+            className="w-full"
+            required
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="category" className="text-sm font-medium">Category</Label>
+          <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="education">Education</SelectItem>
+              <SelectItem value="health">Health</SelectItem>
+              <SelectItem value="events">Events</SelectItem>
+              <SelectItem value="emergencies">Emergencies</SelectItem>
+              <SelectItem value="sports">Sports</SelectItem>
+              <SelectItem value="clubs">Clubs</SelectItem>
+              <SelectItem value="environment">Environment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button type="submit" className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600">
+            Create Campaign
+          </Button>
+        </div>
       </div>
     </form>
-  );
-};
-
-// Donation Modal Component
-const DonationModal = ({ campaign, onDonate, onClose }: {
-  campaign: Campaign | null;
-  onDonate: (amount: number) => void;
-  onClose: () => void;
-}) => {
-  const [amount, setAmount] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const quickAmounts = [100, 500, 1000, 2000, 5000];
-
-  const handleDonate = async () => {
-    const donationAmount = parseInt(amount);
-    if (!donationAmount || donationAmount < 1) return;
-
-    setIsProcessing(true);
-    await onDonate(donationAmount);
-    setIsProcessing(false);
-  };
-
-  if (!campaign) return null;
-
-  return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <h3 className="font-semibold mb-1">{campaign.title}</h3>
-        <p className="text-sm text-muted-foreground">by {campaign.creatorName}</p>
-      </div>
-
-      <div className="bg-secondary/50 rounded-lg p-3">
-        <div className="flex justify-between text-sm mb-2">
-          <span>Raised: ₹{campaign.raisedAmount.toLocaleString()}</span>
-          <span>Goal: ₹{campaign.goalAmount.toLocaleString()}</span>
-        </div>
-        <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
-      </div>
-
-      <div>
-        <Label htmlFor="amount">Donation Amount (₹)</Label>
-        <Input
-          id="amount"
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Enter amount"
-          className="mt-1"
-        />
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {quickAmounts.map(quickAmount => (
-          <Button
-            key={quickAmount}
-            type="button"
-            variant="outline"
-            onClick={() => setAmount(quickAmount.toString())}
-            className="text-xs"
-          >
-            ₹{quickAmount}
-          </Button>
-        ))}
-      </div>
-
-      <div className="flex gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleDonate}
-          disabled={!amount || isProcessing}
-          className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600"
-        >
-          {isProcessing ? 'Processing...' : 'Donate Now'}
-        </Button>
-      </div>
-    </div>
   );
 };
 
