@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { useAuth } from '../contexts/AuthContext';
+import { useProfile } from '../contexts/ProfileContext';
 import { useToast } from '../hooks/use-toast';
 import {
   Dialog,
@@ -20,6 +21,7 @@ interface EditProfileModalProps {
 
 const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
+  const { updateProfile, profileData } = useProfile();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -59,16 +61,13 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Save profile data to localStorage for persistence
-      const profileData = {
+      // Save profile data using context
+      const newProfileData = {
         ...formData,
         profileImage,
         updatedAt: new Date().toISOString()
       };
-      localStorage.setItem('campusMediaProfile', JSON.stringify(profileData));
-      
-      // Trigger a custom event to notify other components
-      window.dispatchEvent(new CustomEvent('profileUpdated', { detail: profileData }));
+      updateProfile(newProfileData);
       
       toast({
         title: "Profile updated!",
@@ -88,9 +87,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
 
   // Load saved profile data
   React.useEffect(() => {
-    const savedProfile = localStorage.getItem('campusMediaProfile');
-    if (savedProfile) {
-      const profileData = JSON.parse(savedProfile);
+    if (profileData && isOpen) {
       setFormData({
         displayName: profileData.displayName || user?.displayName || '',
         bio: profileData.bio || '🎓 Campus community member • Connecting with fellow students 🚀',
@@ -99,7 +96,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
       });
       setProfileImage(profileData.profileImage || null);
     }
-  }, [user, isOpen]);
+  }, [user, profileData, isOpen]);
 
   const getAvatarColor = (name: string) => {
     const colors = [

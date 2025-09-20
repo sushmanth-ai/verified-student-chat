@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, User, Trash2, Reply, TrendingUp, Siren as Fire } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useProfile } from '../contexts/ProfileContext';
 import { db } from '../lib/firebase';
 import {
   collection,
@@ -64,26 +65,11 @@ const HomeScreen = () => {
   const [showReplies, setShowReplies] = useState<{ [commentId: string]: boolean }>({});
   const [activeTab, setActiveTab] = useState<'recent' | 'trending'>('recent');
   const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set());
-  const [profileData, setProfileData] = useState<any>(null);
   const [showUserStories, setShowUserStories] = useState<{ [userId: string]: boolean }>({});
   const { user } = useAuth();
+  const { profileData } = useProfile();
   const { toast } = useToast();
 
-  // Load profile data
-  useEffect(() => {
-    const savedProfile = localStorage.getItem('campusMediaProfile');
-    if (savedProfile) {
-      setProfileData(JSON.parse(savedProfile));
-    }
-    
-    // Listen for profile updates
-    const handleProfileUpdate = (event: any) => {
-      setProfileData(event.detail);
-    };
-    
-    window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
-  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'posts'));
@@ -354,7 +340,7 @@ const HomeScreen = () => {
 
   if (loading) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-purple-500 border-r-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-300 font-medium">Loading posts...</p>
@@ -455,19 +441,28 @@ const HomeScreen = () => {
                       onClick={() => handleUserProfileClick(post.authorId)}
                       className="w-12 h-12 rounded-full shadow-lg ring-4 ring-white/50 dark:ring-gray-700/50 overflow-hidden hover:scale-110 transition-transform duration-200"
                     >
-                      {post.authorId === user?.uid && profileData?.profileImage ? (
-                        <img 
-                          src={profileData.profileImage} 
-                          alt="Profile" 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(post.authorName)} flex items-center justify-center`}>
-                          <span className="text-white font-bold text-lg">
-                            {post.authorName[0]?.toUpperCase()}
-                          </span>
-                        </div>
-                      )}
+                      {(() => {
+                        // Check if this post author has profile data
+                        const authorProfile = post.authorId === user?.uid ? profileData : null;
+                        
+                        if (authorProfile?.profileImage) {
+                          return (
+                            <img 
+                              src={authorProfile.profileImage} 
+                              alt="Profile" 
+                              className="w-full h-full object-cover"
+                            />
+                          );
+                        } else {
+                          return (
+                            <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(post.authorName)} flex items-center justify-center`}>
+                              <span className="text-white font-bold text-lg">
+                                {post.authorName[0]?.toUpperCase()}
+                              </span>
+                            </div>
+                          );
+                        }
+                      })()}
                     </button>
                   </div>
                   <div className="flex-1">
