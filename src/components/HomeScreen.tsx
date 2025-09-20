@@ -14,6 +14,7 @@ import {
   arrayRemove,
   addDoc,
   getDocs,
+  getDoc,
   serverTimestamp,
   deleteDoc
 } from 'firebase/firestore';
@@ -53,6 +54,7 @@ interface Post {
   hasImage?: boolean;
   imageName?: string;
   imageData?: string;
+  imageUrl?: string;
 }
 
 const HomeScreen = () => {
@@ -66,6 +68,7 @@ const HomeScreen = () => {
   const [activeTab, setActiveTab] = useState<'recent' | 'trending'>('recent');
   const [likingPosts, setLikingPosts] = useState<Set<string>>(new Set());
   const [showUserStories, setShowUserStories] = useState<{ [userId: string]: boolean }>({});
+  const [profiles, setProfiles] = useState<Record<string, { profileImage?: string; displayName?: string }>>({});
   const { user } = useAuth();
   const { profileData } = useProfile();
   const { toast } = useToast();
@@ -127,6 +130,26 @@ const HomeScreen = () => {
 
     return unsubscribe;
   }, [toast]);
+
+  // Fetch author profiles for posts
+  useEffect(() => {
+    const ids = Array.from(new Set(posts.map(p => p.authorId)));
+    if (ids.length === 0) return;
+    Promise.all(
+      ids.map(async (id) => {
+        try {
+          const snap = await getDoc(doc(db, 'profiles', id));
+          return [id, snap.exists() ? snap.data() : null] as const;
+        } catch {
+          return [id, null] as const;
+        }
+      })
+    ).then(entries => {
+      const map: Record<string, any> = {};
+      entries.forEach(([id, data]) => { if (data) map[id] = data; });
+      setProfiles(map);
+    });
+  }, [posts]);
 
   // Listen for new posts and show notifications
   useEffect(() => {
@@ -443,7 +466,7 @@ const HomeScreen = () => {
                     >
                       {(() => {
                         // Check if this post author has profile data
-                        const authorProfile = post.authorId === user?.uid ? profileData : null;
+                        const authorProfile = profiles[post.authorId] || (post.authorId === user?.uid ? profileData : null);
                         
                         if (authorProfile?.profileImage) {
                           return (
@@ -495,10 +518,10 @@ const HomeScreen = () => {
               <div className="px-6 pb-4">
                 <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap text-lg">{post.content}</p>
                 {/* Display image if available */}
-                {post.hasImage && post.imageData && (
+                {post.hasImage && (post.imageUrl || post.imageData) && (
                   <div className="mt-4 rounded-2xl overflow-hidden shadow-lg">
                     <img 
-                      src={post.imageData} 
+                      src={post.imageUrl || post.imageData} 
                       alt={post.imageName || 'Post image'} 
                       className="w-full h-auto max-h-96 object-cover"
                     />

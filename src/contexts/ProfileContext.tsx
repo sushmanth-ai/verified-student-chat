@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { db, storage } from '../lib/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { useAuth } from './AuthContext';
 
 interface ProfileData {
   displayName: string;
@@ -27,6 +31,7 @@ export const useProfile = () => {
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     // Load initial profile data
@@ -35,7 +40,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setProfileData(JSON.parse(savedProfile));
     }
 
-    // Listen for profile updates
+    // Listen for profile updates (local events)
     const handleProfileUpdate = (event: any) => {
       const updatedProfile = event.detail;
       setProfileData(updatedProfile);
@@ -43,13 +48,60 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
 
     window.addEventListener('profileUpdated', handleProfileUpdate);
-    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
-  }, []);
+
+    // Subscribe to Firestore profile for the current user
+    let unsubscribe: (() => void) | undefined;
+    if (user) {
+      const profileRef = doc(db, 'profiles', user.uid);
+      unsubscribe = onSnapshot(profileRef, (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as any;
+          const normalized = {
+            displayName: data.displayName || '',
+            bio: data.bio || '',
+            location: data.location || '',
+            website: data.website || '',
+            profileImage: data.profileImage || null,
+            updatedAt: data.updatedAt || new Date().toISOString(),
+          };
+          setProfileData(normalized);
+          localStorage.setItem('campusMediaProfile', JSON.stringify(normalized));
+        }
+      });
+    }
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+      unsubscribe?.();
+    };
+  }, [user]);
 
   const updateProfile = (data: ProfileData) => {
-    setProfileData(data);
-    localStorage.setItem('campusMediaProfile', JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent('profileUpdated', { detail: data }));
+    const run = async () => {
+      try {
+        let imageUrl = data.profileImage;
+
+        // If the image is a base64 data URL, upload it to Firebase Storage
+        if (user && imageUrl && imageUrl.startsWith('data:')) {
+          const avatarRef = ref(storage, `avatars/${user.uid}.jpg`);
+          await uploadString(avatarRef, imageUrl, 'data_url');
+          imageUrl = await getDownloadURL(avatarRef);
+        }
+
+        const newData = { ...data, profileImage: imageUrl, updatedAt: new Date().toISOString() };
+        setProfileData(newData);
+        localStorage.setItem('campusMediaProfile', JSON.stringify(newData));
+        window.dispatchEvent(new CustomEvent('profileUpdated', { detail: newData }));
+
+        if (user) {
+          await setDoc(doc(db, 'profiles', user.uid), newData, { merge: true });
+        }
+      } catch (e) {
+        // swallow for now; UI already updated optimistically
+      }
+    };
+
+    run();
   };
 
   const getProfileImage = (userId: string) => {

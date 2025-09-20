@@ -4,8 +4,9 @@ import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Camera, X, Sparkles, Upload } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
+import { db, storage } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '../hooks/use-toast';
 
 interface CreatePostProps {
@@ -59,15 +60,13 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
       };
 
       if (selectedFile) {
-        // Convert image to base64 for display
-        const reader = new FileReader();
-        const imageDataUrl = await new Promise<string>((resolve) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(selectedFile);
-        });
+        const path = `posts/${user.uid}/${Date.now()}-${selectedFile.name}`;
+        const imageRef = ref(storage, path);
+        await uploadBytes(imageRef, selectedFile, { contentType: selectedFile.type });
+        const imageUrl = await getDownloadURL(imageRef);
         postData.hasImage = true;
         postData.imageName = selectedFile.name;
-        postData.imageData = imageDataUrl;
+        postData.imageUrl = imageUrl;
       }
 
       await addDoc(collection(db, 'posts'), postData);
