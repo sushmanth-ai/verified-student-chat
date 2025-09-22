@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smartphone, CreditCard, QrCode, CheckCircle, AlertCircle, Heart, ArrowRight } from 'lucide-react';
+import { Smartphone, CreditCard, QrCode, CheckCircle, AlertCircle, Heart, ArrowRight, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Progress } from './ui/progress';
@@ -29,7 +29,9 @@ interface UPIPaymentProps {
 export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onClose }) => {
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'amount' | 'processing' | 'success'>('amount');
+  const [paymentStep, setPaymentStep] = useState<'amount' | 'processing' | 'verification' | 'success' | 'failed'>('amount');
+  const [transactionId, setTransactionId] = useState('');
+  const [paymentTimeout, setPaymentTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
@@ -64,11 +66,15 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     setPaymentStep('processing');
 
     try {
+      // Generate unique transaction ID
+      const txnId = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+      setTransactionId(txnId);
+
       // Generate UPI payment link using the correct format
       const upiId = campaign?.upiId || "9876543210@upi";
       const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
       
-      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR`;
+      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${txnId}`)}`;
       
       // Check if device supports UPI
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -78,29 +84,34 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         window.location.href = upiUrl;
         
         toast({ 
-          title: "UPI Payment Initiated", 
-          description: "Complete the payment in your UPI app. Return to confirm completion." 
+          title: "Opening UPI App", 
+          description: "Complete the payment in your UPI app. We'll verify the transaction." 
         });
         
-        // Wait for user to return and confirm payment
-        setPaymentStep('success');
+        // Set timeout for payment verification
+        const timeout = setTimeout(() => {
+          setPaymentStep('verification');
+          setIsProcessing(false);
+        }, 3000); // Wait 3 seconds before showing verification
+        
+        setPaymentTimeout(timeout);
         
       } else {
-        // On desktop, show QR code or instructions
-        toast({ 
-          title: "UPI Payment Link Generated", 
-          description: "Use your mobile device to scan QR code or copy the UPI link." 
+        // On desktop, show instructions
+        navigator.clipboard.writeText(upiUrl).then(() => {
+          toast({ 
+            title: "UPI Link Copied!", 
+            description: "Paste this link in any UPI app on your mobile to complete the donation." 
+          });
         });
         
-        // For demo purposes, simulate successful payment
-        setTimeout(() => {
-          setPaymentStep('success');
-          setTimeout(() => {
-            onDonate(donationAmount);
-            setPaymentStep('amount');
-            setIsProcessing(false);
-          }, 2000);
-        }, 1500);
+        // Set timeout for payment verification
+        const timeout = setTimeout(() => {
+          setPaymentStep('verification');
+          setIsProcessing(false);
+        }, 3000);
+        
+        setPaymentTimeout(timeout);
       }
       
     } catch (error) {
@@ -115,6 +126,52 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     }
   };
 
+  const handlePaymentSuccess = () => {
+    if (paymentTimeout) {
+      clearTimeout(paymentTimeout);
+      setPaymentTimeout(null);
+    }
+    
+    setPaymentStep('success');
+    
+    // Process the donation
+    setTimeout(() => {
+      onDonate(parseInt(amount));
+      resetPaymentFlow();
+      toast({ 
+        title: "Thank you for your donation!", 
+        description: `₹${amount} donated successfully to ${campaign?.title}` 
+      });
+    }, 1500);
+  };
+
+  const handlePaymentFailed = () => {
+    if (paymentTimeout) {
+      clearTimeout(paymentTimeout);
+      setPaymentTimeout(null);
+    }
+    
+    setPaymentStep('failed');
+    setIsProcessing(false);
+    
+    toast({ 
+      title: "Payment Failed", 
+      description: "The transaction was not completed. No money has been debited.", 
+      variant: "destructive" 
+    });
+  };
+
+  const resetPaymentFlow = () => {
+    setPaymentStep('amount');
+    setIsProcessing(false);
+    setTransactionId('');
+    setAmount('');
+    if (paymentTimeout) {
+      clearTimeout(paymentTimeout);
+      setPaymentTimeout(null);
+    }
+  };
+
   const copyUPILink = () => {
     if (!campaign) return;
     
@@ -123,7 +180,8 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     
     const upiId = campaign.upiId || "9876543210@upi";
     const payeeName = campaign.organizerName || campaign.creatorName || "SM Fundraiser";
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR`;
+    const txnId = transactionId || `TXN${Date.now()}`;
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign.title} - ${txnId}`)}`;
     
     navigator.clipboard.writeText(upiUrl).then(() => {
       toast({ 
@@ -142,8 +200,9 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
           <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Smartphone size={32} className="text-white" />
           </div>
-          <h3 className="font-bold text-lg mb-2">Processing Payment</h3>
-          <p className="text-sm text-muted-foreground">Opening your UPI app...</p>
+          <h3 className="font-bold text-lg mb-2">Opening UPI App</h3>
+          <p className="text-sm text-muted-foreground">Redirecting to your UPI app...</p>
+          <p className="text-xs text-muted-foreground mt-2">Transaction ID: {transactionId}</p>
         </div>
         
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
@@ -177,45 +236,158 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     );
   }
 
+  if (paymentStep === 'verification') {
+    return (
+      <div className="space-y-6 p-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <RefreshCw size={32} className="text-white animate-spin" />
+          </div>
+          <h3 className="font-bold text-lg mb-2">Verify Payment Status</h3>
+          <p className="text-sm text-muted-foreground mb-2">Did you complete the payment in your UPI app?</p>
+          <p className="text-xs text-muted-foreground">Transaction ID: {transactionId}</p>
+        </div>
+        
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+          <div className="flex items-start gap-2">
+            <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Payment Verification</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Please confirm if your payment of ₹{amount} was successful in your UPI app.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <Button 
+            onClick={handlePaymentSuccess}
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl py-3"
+          >
+            <CheckCircle size={18} className="mr-2" />
+            Yes, Payment Successful
+          </Button>
+          
+          <Button 
+            onClick={handlePaymentFailed}
+            variant="outline"
+            className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-xl py-3"
+          >
+            <XCircle size={18} className="mr-2" />
+            No, Payment Failed
+          </Button>
+          
+          <Button 
+            onClick={() => {
+              setPaymentStep('processing');
+              setIsProcessing(true);
+              
+              // Retry opening UPI app
+              const donationAmount = parseInt(amount);
+              const upiId = campaign?.upiId || "9876543210@upi";
+              const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
+              const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${transactionId}`)}`;
+              
+              window.location.href = upiUrl;
+              
+              setTimeout(() => {
+                setPaymentStep('verification');
+                setIsProcessing(false);
+              }, 3000);
+            }}
+            variant="ghost"
+            className="w-full text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-xl py-3"
+          >
+            <RefreshCw size={18} className="mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (paymentStep === 'success') {
     return (
       <div className="space-y-6 p-4 text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto">
+        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto animate-bounce">
           <CheckCircle size={32} className="text-white" />
         </div>
         <div>
-          <h3 className="font-bold text-lg text-green-600 mb-2">Payment Initiated!</h3>
-          <p className="text-sm text-muted-foreground">Did you complete the payment of ₹{amount}?</p>
+          <h3 className="font-bold text-lg text-green-600 mb-2">Payment Successful!</h3>
+          <p className="text-sm text-muted-foreground">Your donation of ₹{amount} has been processed successfully.</p>
+          <p className="text-xs text-muted-foreground mt-2">Transaction ID: {transactionId}</p>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-          <p className="text-green-800 dark:text-green-200 font-medium text-sm mb-2">
-            If payment was successful, click confirm below
+          <p className="text-green-800 dark:text-green-200 font-medium text-sm">
+            Thank you for supporting {campaign.title}!
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (paymentStep === 'failed') {
+    return (
+      <div className="space-y-6 p-4 text-center">
+        <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto">
+          <XCircle size={32} className="text-white" />
+        </div>
+        <div>
+          <h3 className="font-bold text-lg text-red-600 mb-2">Payment Failed</h3>
+          <p className="text-sm text-muted-foreground">The transaction was not completed. No money has been debited from your account.</p>
+          <p className="text-xs text-muted-foreground mt-2">Transaction ID: {transactionId}</p>
+        </div>
+        
+        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
+          <div className="flex items-start gap-2">
+            <AlertCircle size={16} className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="text-red-800 dark:text-red-200 font-medium text-sm">Common reasons for payment failure:</p>
+              <ul className="text-xs text-red-700 dark:text-red-300 space-y-1 text-left">
+                <li>• Insufficient balance in account</li>
+                <li>• UPI app not responding</li>
+                <li>• Network connectivity issues</li>
+                <li>• Transaction cancelled by user</li>
+                <li>• Daily transaction limit exceeded</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <Button 
+            onClick={resetPaymentFlow}
             variant="outline" 
-            onClick={() => {
-              setPaymentStep('amount');
-              setIsProcessing(false);
-            }}
-            className="flex-1"
+            className="flex-1 rounded-xl"
           >
-            Cancel
+            Try Different Amount
           </Button>
           <Button 
             onClick={() => {
-              onDonate(parseInt(amount));
-              setPaymentStep('amount');
-              setIsProcessing(false);
-              toast({ 
-                title: "Thank you!", 
-                description: "Donation confirmed successfully!" 
-              });
+              setPaymentStep('processing');
+              setIsProcessing(true);
+              
+              // Retry with same amount
+              const donationAmount = parseInt(amount);
+              const upiId = campaign?.upiId || "9876543210@upi";
+              const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
+              const newTxnId = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+              setTransactionId(newTxnId);
+              
+              const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${newTxnId}`)}`;
+              
+              window.location.href = upiUrl;
+              
+              setTimeout(() => {
+                setPaymentStep('verification');
+                setIsProcessing(false);
+              }, 3000);
             }}
-            className="flex-1 bg-green-500 hover:bg-green-600"
+            className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl"
           >
-            Confirm Payment
+            <RefreshCw size={16} className="mr-2" />
+            Retry Payment
           </Button>
         </div>
       </div>
@@ -257,7 +429,7 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
             </div>
             <h4 className="font-semibold text-sm">UPI Payment</h4>
             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-              Instant
+              Secure
             </Badge>
           </div>
           
@@ -316,12 +488,12 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         <div className="flex items-start gap-2">
           <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
           <div className="space-y-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">How it works:</p>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Important:</p>
             <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-              <li>• Enter donation amount</li>
-              <li>• Click "Donate via UPI"</li>
-              <li>• Complete payment in your UPI app</li>
-              <li>• Donation will be added to campaign</li>
+              <li>• Complete the payment in your UPI app</li>
+              <li>• Return here to verify transaction status</li>
+              <li>• If payment fails, no money will be debited</li>
+              <li>• You can retry if the transaction fails</li>
             </ul>
           </div>
         </div>

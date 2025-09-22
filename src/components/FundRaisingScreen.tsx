@@ -78,50 +78,10 @@ const FundRaisingScreen = () => {
   const handleDonate = async (amount: number) => {
     if (!user || !selectedCampaign) return;
     
-    try {
-      // Use campaign's UPI ID for payment
-      const upiId = selectedCampaign.upiId;
-      const payeeName = selectedCampaign.organizerName || selectedCampaign.creatorName;
-      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(`Donation for ${selectedCampaign.title}`)}`;
-      
-      // Check if device supports UPI
-      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        // On mobile, try to open UPI app
-        window.location.href = upiUrl;
-        
-        toast({ 
-          title: "Opening UPI App", 
-          description: "Complete the payment in your UPI app to finish the donation." 
-        });
-        
-        // Simulate successful payment (in real app, use payment webhooks)
-        setTimeout(async () => {
-          await updateCampaignAfterDonation(selectedCampaign.id, amount, user);
-          
-          toast({ 
-            title: "Donation Successful!", 
-            description: `₹${amount} donated successfully to ${selectedCampaign.title}` 
-          });
-        }, 2000);
-        
-      } else {
-        // On desktop, show instructions
-        navigator.clipboard.writeText(upiUrl).then(() => {
-          toast({ 
-            title: "UPI Link Copied!", 
-            description: "Paste this link in any UPI app on your mobile to complete the donation." 
-          });
-        });
-      }
-      
-      setShowDonationModal(false);
-      setSelectedCampaign(null);
-    } catch (error) {
-      console.error('Error processing donation:', error);
-      toast({ title: "Error", description: "Failed to process donation", variant: "destructive" });
-    }
+    // This function will be called only when payment is confirmed successful
+    await updateCampaignAfterDonation(selectedCampaign.id, amount, user);
+    setShowDonationModal(false);
+    setSelectedCampaign(null);
   };
 
   const updateCampaignAfterDonation = async (campaignId: string, amount: number, donor: any) => {
