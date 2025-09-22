@@ -64,12 +64,11 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     setPaymentStep('processing');
 
     try {
-      // Generate UPI payment link using campaign's UPI ID
-      const upiId = campaign?.upiId || "campusmedia@upi";
-      const payeeName = campaign?.organizerName || campaign?.creatorName || "Campus Media Fund";
-      const transactionNote = `Donation for ${campaign?.title}`;
+      // Generate UPI payment link using the correct format
+      const upiId = campaign?.upiId || "9876543210@upi";
+      const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
       
-      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR`;
       
       // Check if device supports UPI
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -79,19 +78,12 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         window.location.href = upiUrl;
         
         toast({ 
-          title: "Opening UPI App", 
-          description: "Complete the payment in your UPI app to finish the donation." 
+          title: "UPI Payment Initiated", 
+          description: "Complete the payment in your UPI app. Return to confirm completion." 
         });
         
-        // Show processing state
-        setTimeout(() => {
-          setPaymentStep('success');
-          setTimeout(() => {
-            onDonate(donationAmount);
-            setPaymentStep('amount');
-            setIsProcessing(false);
-          }, 2000);
-        }, 1000);
+        // Wait for user to return and confirm payment
+        setPaymentStep('success');
         
       } else {
         // On desktop, show QR code or instructions
@@ -129,10 +121,9 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     const donationAmount = parseInt(amount);
     if (!donationAmount) return;
     
-    const upiId = campaign.upiId || "campusmedia@upi";
-    const payeeName = campaign.organizerName || campaign.creatorName || "Campus Media Fund";
-    const transactionNote = `Donation for ${campaign.title}`;
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
+    const upiId = campaign.upiId || "9876543210@upi";
+    const payeeName = campaign.organizerName || campaign.creatorName || "SM Fundraiser";
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR`;
     
     navigator.clipboard.writeText(upiUrl).then(() => {
       toast({ 
@@ -189,17 +180,43 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
   if (paymentStep === 'success') {
     return (
       <div className="space-y-6 p-4 text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto animate-bounce">
+        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto">
           <CheckCircle size={32} className="text-white" />
         </div>
         <div>
-          <h3 className="font-bold text-lg text-green-600 mb-2">Payment Successful!</h3>
-          <p className="text-sm text-muted-foreground">Thank you for your generous donation of ₹{amount}</p>
+          <h3 className="font-bold text-lg text-green-600 mb-2">Payment Initiated!</h3>
+          <p className="text-sm text-muted-foreground">Did you complete the payment of ₹{amount}?</p>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800">
-          <p className="text-green-800 dark:text-green-200 font-medium text-sm">
-            Your contribution will make a real difference!
+          <p className="text-green-800 dark:text-green-200 font-medium text-sm mb-2">
+            If payment was successful, click confirm below
           </p>
+        </div>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setPaymentStep('amount');
+              setIsProcessing(false);
+            }}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => {
+              onDonate(parseInt(amount));
+              setPaymentStep('amount');
+              setIsProcessing(false);
+              toast({ 
+                title: "Thank you!", 
+                description: "Donation confirmed successfully!" 
+              });
+            }}
+            className="flex-1 bg-green-500 hover:bg-green-600"
+          >
+            Confirm Payment
+          </Button>
         </div>
       </div>
     );
