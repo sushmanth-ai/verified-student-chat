@@ -12,10 +12,12 @@ interface Campaign {
   id: string;
   title: string;
   description: string;
-  goalAmount: number;
-  raisedAmount: number;
+  target: number;
+  raised: number;
   category: string;
   creatorName: string;
+  organizerName?: string;
+  upiId?: string;
 }
 
 interface UPIPaymentProps {
@@ -62,9 +64,9 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     setPaymentStep('processing');
 
     try {
-      // Generate UPI payment link
-      const upiId = "sushmanth1106@okhdfcbank"; // UPI ID for receiving donations
-      const payeeName = "Campus Media Fund";
+      // Generate UPI payment link using campaign's UPI ID
+      const upiId = campaign?.upiId || "campusmedia@upi";
+      const payeeName = campaign?.organizerName || campaign?.creatorName || "Campus Media Fund";
       const transactionNote = `Donation for ${campaign?.title}`;
       
       const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
@@ -127,8 +129,8 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
     const donationAmount = parseInt(amount);
     if (!donationAmount) return;
     
-    const upiId = "sushmanth1106@okhdfcbank";
-    const payeeName = "Campus Media Fund";
+    const upiId = campaign.upiId || "campusmedia@upi";
+    const payeeName = campaign.organizerName || campaign.creatorName || "Campus Media Fund";
     const transactionNote = `Donation for ${campaign.title}`;
     const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(transactionNote)}`;
     
@@ -217,13 +219,13 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
         
         <div className="bg-secondary/50 rounded-xl p-3 space-y-2">
           <div className="flex justify-between text-xs sm:text-sm">
-            <span className="font-medium">Raised: ₹{campaign.raisedAmount.toLocaleString()}</span>
-            <span className="text-muted-foreground">Goal: ₹{campaign.goalAmount.toLocaleString()}</span>
+            <span className="font-medium">Raised: ₹{campaign.raised.toLocaleString()}</span>
+            <span className="text-muted-foreground">Goal: ₹{campaign.target.toLocaleString()}</span>
           </div>
-          <Progress value={(campaign.raisedAmount / campaign.goalAmount) * 100} className="h-2" />
+          <Progress value={(campaign.raised / campaign.target) * 100} className="h-2" />
           <div className="flex justify-center">
             <Badge variant="secondary" className="text-xs">
-              {Math.round((campaign.raisedAmount / campaign.goalAmount) * 100)}% funded
+              {Math.round((campaign.raised / campaign.target) * 100)}% funded
             </Badge>
           </div>
         </div>
