@@ -217,20 +217,36 @@ const FundRaisingScreen = () => {
       </div>
 
       {/* Donation Modal */}
-      <Dialog open={showDonationModal} onOpenChange={setShowDonationModal}>
-        <DialogContent className="w-[95vw] max-w-sm mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-center flex items-center justify-center gap-2">
-              <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
-                <Heart size={14} className="text-white" />
+      <Dialog open={showDonationModal} onOpenChange={(open) => {
+        setShowDonationModal(open);
+        if (!open) {
+          setSelectedCampaign(null);
+        }
+      }}>
+        <DialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3 pb-4">
+            <DialogTitle className="text-center flex items-center justify-center gap-2 text-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                <Heart size={16} className="text-white" />
               </div>
-              Make a Donation via UPI
+              Enter Donation Amount
             </DialogTitle>
+            {selectedCampaign && (
+              <div className="text-center space-y-1">
+                <p className="text-sm font-medium">{selectedCampaign.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  Supporting: {selectedCampaign.organizerName}
+                </p>
+              </div>
+            )}
           </DialogHeader>
           <UPIPayment 
             campaign={selectedCampaign}
             onDonate={handleDonate}
-            onClose={() => setShowDonationModal(false)}
+            onClose={() => {
+              setShowDonationModal(false);
+              setSelectedCampaign(null);
+            }}
           />
         </DialogContent>
       </Dialog>
