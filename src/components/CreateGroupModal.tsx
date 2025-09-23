@@ -75,7 +75,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         <DialogHeader>
           <DialogTitle>Create New Group</DialogTitle>
           <DialogDescription>
-            Create a new group to connect with other verified students on campus.
+            Create a new group to connect with other students on campus.
           </DialogDescription>
         </DialogHeader>
         
