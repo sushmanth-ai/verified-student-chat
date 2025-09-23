@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Smartphone, CreditCard, QrCode, CheckCircle, AlertCircle, Heart, ArrowRight, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -33,6 +33,31 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
   const [transactionId, setTransactionId] = useState('');
   const [paymentTimeout, setPaymentTimeout] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+
+  // Move to verification automatically when the user returns from the UPI app
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && paymentStep === 'processing') {
+        setPaymentStep('verification');
+        setIsProcessing(false);
+      }
+    };
+    const handleFocus = () => {
+      if (paymentStep === 'processing') {
+        setPaymentStep('verification');
+        setIsProcessing(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [paymentStep]);
+
 
   const quickAmounts = [100, 500, 1000, 2000, 5000, 10000];
   const upiApps = [
@@ -80,22 +105,20 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
-        // On mobile, try to open UPI app
-        window.location.href = upiUrl;
+        // Prepare verification timeout before leaving the page
+        const timeout = setTimeout(() => {
+          setPaymentStep('verification');
+          setIsProcessing(false);
+        }, 3000);
+        setPaymentTimeout(timeout);
         
         toast({ 
           title: "Opening UPI App", 
           description: "Complete the payment in your UPI app. We'll verify the transaction." 
         });
         
-        // Set timeout for payment verification
-        const timeout = setTimeout(() => {
-          setPaymentStep('verification');
-          setIsProcessing(false);
-        }, 3000); // Wait 3 seconds before showing verification
-        
-        setPaymentTimeout(timeout);
-        
+        // Attempt to open UPI app
+        window.location.href = upiUrl;
       } else {
         // On desktop, show instructions
         navigator.clipboard.writeText(upiUrl).then(() => {
@@ -289,12 +312,14 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
               const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
               const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${transactionId}`)}`;
               
-              window.location.href = upiUrl;
-              
-              setTimeout(() => {
+              // Schedule verification step before redirect
+              const timeout = setTimeout(() => {
                 setPaymentStep('verification');
                 setIsProcessing(false);
               }, 3000);
+              setPaymentTimeout(timeout);
+              
+              window.location.href = upiUrl;
             }}
             variant="ghost"
             className="w-full text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-xl py-3"
@@ -377,12 +402,14 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
               
               const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${newTxnId}`)}`;
               
-              window.location.href = upiUrl;
-              
-              setTimeout(() => {
+              // Schedule verification step before redirect
+              const timeout = setTimeout(() => {
                 setPaymentStep('verification');
                 setIsProcessing(false);
               }, 3000);
+              setPaymentTimeout(timeout);
+              
+              window.location.href = upiUrl;
             }}
             className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl"
           >
