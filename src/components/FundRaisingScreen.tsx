@@ -272,11 +272,19 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
     if (!user) return;
 
     if (!validateUPIId(formData.upiId)) {
-      toast({ 
-        title: "Invalid UPI ID", 
-        description: "Please enter a valid UPI ID (e.g., name@paytm, phone@ybl)", 
-        variant: "destructive" 
-      });
+      if (formData.upiId.includes('9876543210') || formData.upiId.includes('test') || formData.upiId.includes('demo')) {
+        toast({ 
+          title: "Invalid UPI ID", 
+          description: "Please enter your real UPI ID. Test/fake UPI IDs will cause payment failures due to risk policies.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ 
+          title: "Invalid UPI ID Format", 
+          description: "Please enter a valid UPI ID format (e.g., name@paytm, phone@ybl)", 
+          variant: "destructive" 
+        });
+      }
       return;
     }
 
@@ -367,13 +375,17 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
             id="upiId"
             value={formData.upiId}
             onChange={(e) => setFormData({...formData, upiId: e.target.value})}
-            placeholder="yourname@paytm or 9876543210@ybl"
+            placeholder="yourname@paytm or phone@ybl"
             className="w-full"
             required
           />
-          <p className="text-xs text-muted-foreground">
-            Enter your UPI ID where donations will be received (e.g., name@paytm, phone@ybl)
-          </p>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>Enter your real UPI ID where donations will be received.</p>
+            <p className="text-amber-600 dark:text-amber-400">
+              ⚠️ Important: Use only valid, active UPI IDs. Test/fake IDs will cause payment failures.
+            </p>
+            <p>Examples: name@paytm, phone@ybl, account@okaxis</p>
+          </div>
         </div>
 
         <div className="space-y-2">

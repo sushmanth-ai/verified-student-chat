@@ -101,13 +101,34 @@ export const fetchDonations = async (campaignId: string): Promise<Donation[]> =>
   }
 };
 
-// Validate UPI ID format
+// Validate UPI ID format with stricter rules to prevent risk policy failures
 export const validateUPIId = (upiId: string): boolean => {
-  const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
-  return upiRegex.test(upiId);
+  // More comprehensive UPI ID validation
+  const upiRegex = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
+  
+  // Check basic format
+  if (!upiRegex.test(upiId)) return false;
+  
+  // Prevent obviously fake/test UPI IDs that trigger risk policies
+  const suspiciousPatterns = [
+    /^test/i,
+    /^demo/i,
+    /^fake/i,
+    /^sample/i,
+    /^9876543210@/,
+    /^1234567890@/,
+    /^0000000000@/,
+    /@test$/i,
+    /@demo$/i,
+    /@fake$/i
+  ];
+  
+  return !suspiciousPatterns.some(pattern => pattern.test(upiId));
 };
 
-// Generate UPI payment link
-export const generateUPILink = (upiId: string, payeeName: string, amount: number, note: string): string => {
-  return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(note)}`;
+// Generate UPI payment link with risk-safe parameters
+export const generateUPILink = (upiId: string, payeeName: string, amount: number, txnId: string): string => {
+  // Keep transaction note short and simple to avoid triggering risk policies
+  const shortNote = `Donation-${txnId.slice(-6)}`;
+  return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=${encodeURIComponent(shortNote)}`;
 };

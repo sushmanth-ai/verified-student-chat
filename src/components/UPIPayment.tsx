@@ -95,11 +95,25 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
       const txnId = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
       setTransactionId(txnId);
 
-      // Generate UPI payment link using the correct format
-      const upiId = campaign?.upiId || "9876543210@upi";
-      const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
+      // Generate UPI payment link using the correct format - ensure real UPI ID is used
+      if (!campaign?.upiId) {
+        toast({ 
+          title: "Invalid Campaign", 
+          description: "This campaign doesn't have a valid UPI ID. Please contact the organizer.", 
+          variant: "destructive" 
+        });
+        setPaymentStep('amount');
+        setIsProcessing(false);
+        return;
+      }
+
+      const upiId = campaign.upiId;
+      const payeeName = campaign?.organizerName || campaign?.creatorName || "Fundraiser";
       
-      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${txnId}`)}`;
+      // Keep transaction note short and simple to avoid risk policy triggers
+      const shortNote = `Donation-${txnId.slice(-6)}`;
+      
+      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(shortNote)}`;
       
       // Check if device supports UPI
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -196,15 +210,23 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
   };
 
   const copyUPILink = () => {
-    if (!campaign) return;
+    if (!campaign?.upiId) {
+      toast({ 
+        title: "Invalid Campaign", 
+        description: "This campaign doesn't have a valid UPI ID.", 
+        variant: "destructive" 
+      });
+      return;
+    }
     
     const donationAmount = parseInt(amount);
     if (!donationAmount) return;
     
-    const upiId = campaign.upiId || "9876543210@upi";
-    const payeeName = campaign.organizerName || campaign.creatorName || "SM Fundraiser";
+    const upiId = campaign.upiId;
+    const payeeName = campaign.organizerName || campaign.creatorName || "Fundraiser";
     const txnId = transactionId || `TXN${Date.now()}`;
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign.title} - ${txnId}`)}`;
+    const shortNote = `Donation-${txnId.slice(-6)}`;
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(shortNote)}`;
     
     navigator.clipboard.writeText(upiUrl).then(() => {
       toast({ 
@@ -306,11 +328,21 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
               setPaymentStep('processing');
               setIsProcessing(true);
               
-              // Retry opening UPI app
+              // Retry opening UPI app with proper validation
+              if (!campaign?.upiId) {
+                toast({ 
+                  title: "Invalid Campaign", 
+                  description: "This campaign doesn't have a valid UPI ID.", 
+                  variant: "destructive" 
+                });
+                return;
+              }
+
               const donationAmount = parseInt(amount);
-              const upiId = campaign?.upiId || "9876543210@upi";
-              const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
-              const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${transactionId}`)}`;
+              const upiId = campaign.upiId;
+              const payeeName = campaign?.organizerName || campaign?.creatorName || "Fundraiser";
+              const shortNote = `Donation-${transactionId.slice(-6)}`;
+              const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(shortNote)}`;
               
               // Schedule verification step before redirect
               const timeout = setTimeout(() => {
@@ -371,10 +403,12 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
               <p className="text-red-800 dark:text-red-200 font-medium text-sm">Common reasons for payment failure:</p>
               <ul className="text-xs text-red-700 dark:text-red-300 space-y-1 text-left">
                 <li>• Insufficient balance in account</li>
-                <li>• UPI app not responding</li>
+                <li>• Invalid or suspended UPI ID</li>
+                <li>• Transaction declined by risk policy</li>
                 <li>• Network connectivity issues</li>
-                <li>• Transaction cancelled by user</li>
+                <li>• UPI app not responding</li>
                 <li>• Daily transaction limit exceeded</li>
+                <li>• Transaction cancelled by user</li>
               </ul>
             </div>
           </div>
@@ -393,14 +427,24 @@ export const UPIPayment: React.FC<UPIPaymentProps> = ({ campaign, onDonate, onCl
               setPaymentStep('processing');
               setIsProcessing(true);
               
-              // Retry with same amount
+              // Retry with same amount but with proper validation
+              if (!campaign?.upiId) {
+                toast({ 
+                  title: "Invalid Campaign", 
+                  description: "This campaign doesn't have a valid UPI ID.", 
+                  variant: "destructive" 
+                });
+                return;
+              }
+
               const donationAmount = parseInt(amount);
-              const upiId = campaign?.upiId || "9876543210@upi";
-              const payeeName = campaign?.organizerName || campaign?.creatorName || "SM Fundraiser";
+              const upiId = campaign.upiId;
+              const payeeName = campaign?.organizerName || campaign?.creatorName || "Fundraiser";
               const newTxnId = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
               setTransactionId(newTxnId);
               
-              const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(`Donation for ${campaign?.title} - ${newTxnId}`)}`;
+              const shortNote = `Donation-${newTxnId.slice(-6)}`;
+              const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${donationAmount}&cu=INR&tn=${encodeURIComponent(shortNote)}`;
               
               // Schedule verification step before redirect
               const timeout = setTimeout(() => {
