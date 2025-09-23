@@ -15,7 +15,7 @@ import { useToast } from '../hooks/use-toast';
 import { UPIPayment } from './UPIPayment';
 import { CampaignCard, type Campaign } from './CampaignCard';
 import { DonationsList } from './DonationsList';
-import { createCampaign, updateRaisedAmount, addDonation, validateUPIId } from '@/services/fundraisingService';
+import { createCampaign, updateRaisedAmount, addDonation, validateUPIId, verifyUPIId } from '@/services/fundraisingService';
 
 const FundRaisingScreen = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -271,20 +271,23 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
     e.preventDefault();
     if (!user) return;
 
+    // Enhanced UPI ID validation for real money transfers
     if (!validateUPIId(formData.upiId)) {
-      if (formData.upiId.includes('9876543210') || formData.upiId.includes('test') || formData.upiId.includes('demo')) {
-        toast({ 
-          title: "Invalid UPI ID", 
-          description: "Please enter your real UPI ID. Test/fake UPI IDs will cause payment failures due to risk policies.", 
-          variant: "destructive" 
-        });
-      } else {
-        toast({ 
-          title: "Invalid UPI ID Format", 
-          description: "Please enter a valid UPI ID format (e.g., name@paytm, phone@ybl)", 
-          variant: "destructive" 
-        });
-      }
+      toast({ 
+        title: "Invalid UPI ID", 
+        description: "Please enter a valid, active UPI ID. Fake/test IDs will cause payment failures.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Additional verification for UPI provider
+    if (!(await verifyUPIId(formData.upiId))) {
+      toast({ 
+        title: "UPI Provider Not Recognized", 
+        description: "Please use a UPI ID from a recognized provider (e.g., @paytm, @ybl, @okaxis)", 
+        variant: "destructive" 
+      });
       return;
     }
 
@@ -380,11 +383,17 @@ const CreateCampaignModal = ({ onClose }: { onClose: () => void }) => {
             required
           />
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>Enter your real UPI ID where donations will be received.</p>
-            <p className="text-amber-600 dark:text-amber-400">
-              ⚠️ Important: Use only valid, active UPI IDs. Test/fake IDs will cause payment failures.
+            <p className="font-medium">Enter your active UPI ID for real-time money transfers:</p>
+            <p className="text-green-600 dark:text-green-400">
+              ✅ Real money will be transferred instantly to this UPI ID
             </p>
-            <p>Examples: name@paytm, phone@ybl, account@okaxis</p>
+            <p className="text-red-600 dark:text-red-400">
+              ⚠️ Critical: Only use your actual, verified UPI ID. Invalid IDs cause payment failures.
+            </p>
+            <p>Examples: yourname@paytm, 9876543210@ybl, account@okaxis</p>
+            <p className="text-blue-600 dark:text-blue-400">
+              💡 Tip: Use the same UPI ID you use for receiving payments in other apps
+            </p>
           </div>
         </div>
 
