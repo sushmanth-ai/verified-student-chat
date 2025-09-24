@@ -130,14 +130,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       {/* Story Content */}
       <div className="relative w-full h-full max-w-md mx-auto">
         {currentStory.hasImage && currentStory.imageData ? (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-full bg-black flex items-center justify-center">
             <img 
               src={currentStory.imageData} 
               alt={currentStory.imageName || 'Story'} 
-              className="w-full h-full object-cover"
+              className="max-w-full max-h-full object-contain"
             />
             {/* Gradient overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
             
             {/* Story text overlay */}
             {currentStory.content && (
