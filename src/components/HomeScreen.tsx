@@ -526,15 +526,39 @@ const HomeScreen = () => {
 
               {/* Post Content */}
               <div className="px-6 pb-4">
-                <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap text-lg">{post.content}</p>
+                <div className="relative">
+                  <p className="text-gray-900 dark:text-gray-100 leading-loose whitespace-pre-wrap text-lg font-medium tracking-wide 
+                    bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800 dark:from-gray-100 dark:via-white dark:to-gray-100 
+                    bg-clip-text text-transparent bg-300% animate-gradient
+                    drop-shadow-sm selection:bg-blue-200/30 dark:selection:bg-blue-800/30
+                    first-letter:text-3xl first-letter:font-bold first-letter:text-blue-600 dark:first-letter:text-blue-400 
+                    first-letter:float-left first-letter:mr-2 first-letter:mt-1 first-letter:leading-none
+                    [text-shadow:0_1px_2px_rgba(0,0,0,0.1)] dark:[text-shadow:0_1px_2px_rgba(255,255,255,0.1)]
+                    hover:scale-[1.01] transition-all duration-300 ease-out cursor-default
+                    prose prose-lg dark:prose-invert max-w-none
+                    prose-strong:text-blue-600 dark:prose-strong:text-blue-400 prose-strong:font-bold
+                    prose-em:text-purple-600 dark:prose-em:text-purple-400 prose-em:italic
+                    [&>*]:animate-fade-in [&>*]:animation-delay-200"
+                  >
+                    {post.content}
+                  </p>
+                  
+                  {/* Decorative gradient overlay for long posts */}
+                  {post.content.length > 200 && (
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/10 dark:to-gray-900/10 pointer-events-none rounded-lg"></div>
+                  )}
+                </div>
+                
                 {/* Display image if available */}
                 {post.hasImage && post.imageData && (
-                  <div className="mt-4 rounded-2xl overflow-hidden shadow-lg">
+                  <div className="mt-6 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-gray-200/50 dark:ring-gray-700/50 
+                    hover:shadow-3xl hover:scale-[1.02] transition-all duration-500 ease-out group">
                     <img 
                       src={post.imageData} 
                       alt={post.imageName || 'Post image'} 
-                      className="w-full h-auto max-h-96 object-cover"
+                      className="w-full h-auto max-h-96 object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
                 )}
               </div>
