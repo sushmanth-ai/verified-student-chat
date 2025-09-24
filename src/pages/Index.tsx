@@ -56,7 +56,7 @@ const AppContent = () => {
               <span className="text-white font-bold text-lg">C</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold">
-              <span className="text-gray-800 dark:text-gray-200">campu</span>
+              <span className="text-gray-800 dark:text-gray-200">vit</span>
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">S</span>
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">M</span>
               <span className="text-gray-800 dark:text-gray-200">edia</span>
