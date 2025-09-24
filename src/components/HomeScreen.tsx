@@ -71,7 +71,7 @@ const HomeScreen = () => {
 
   // Load profile data
   useEffect(() => {
-    const savedProfile = localStorage.getItem('vitSMediaProfile');
+    const savedProfile = localStorage.getItem('campusMediaProfile');
     if (savedProfile) {
       setProfileData(JSON.parse(savedProfile));
     }
@@ -84,34 +84,6 @@ const HomeScreen = () => {
     window.addEventListener('profileUpdated', handleProfileUpdate);
     return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
   }, []);
-
-  // Function to delete all posts
-  const deleteAllPosts = async () => {
-    try {
-      const q = query(collection(db, 'posts'));
-      const snapshot = await getDocs(q);
-      
-      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
-      
-      toast({
-        title: "All posts deleted",
-        description: "All posts have been successfully deleted.",
-      });
-    } catch (error) {
-      console.error('Error deleting posts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete posts. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Auto-delete all posts on component mount
-  useEffect(() => {
-    deleteAllPosts();
-  }, []); // This runs once when component mounts
 
   useEffect(() => {
     const q = query(collection(db, 'posts'));
@@ -172,7 +144,7 @@ const HomeScreen = () => {
 
   // Listen for new posts and show notifications
   useEffect(() => {
-    const settings = JSON.parse(localStorage.getItem('vitSMediaSettings') || '{}');
+    const settings = JSON.parse(localStorage.getItem('campusMediaSettings') || '{}');
     
     if (settings.notifications && posts.length > 0) {
       const latestPost = posts[0];
@@ -184,7 +156,7 @@ const HomeScreen = () => {
       if (timeDiff < 10000 && latestPost.authorId !== user?.uid) {
         // Show browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('New Post on vitSMedia', {
+          new Notification('New Post on CampusMedia', {
             body: `${latestPost.authorName} shared: ${latestPost.content.substring(0, 50)}...`,
             icon: '/favicon.ico'
           });

@@ -34,7 +34,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   // Load settings from localStorage on component mount
   useEffect(() => {
-    const savedSettings = localStorage.getItem('vitSMediaSettings');
+    const savedSettings = localStorage.getItem('campusMediaSettings');
     if (savedSettings) {
       const parsedSettings = JSON.parse(savedSettings);
       setSettings(parsedSettings);
@@ -48,7 +48,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('vitSMediaSettings', JSON.stringify(settings));
+    localStorage.setItem('campusMediaSettings', JSON.stringify(settings));
   }, [settings]);
 
   const handleSettingChange = (key: string, value: boolean) => {
@@ -60,7 +60,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         if (value && 'Notification' in window) {
           Notification.requestPermission().then(permission => {
             if (permission === 'granted') {
-              new Notification('vitSMedia', {
+              new Notification('CampusMedia', {
                 body: 'Notifications enabled successfully!',
                 icon: '/favicon.ico'
               });
