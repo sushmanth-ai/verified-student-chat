@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Camera, MessageCircle, Calendar, User, LogOut, Heart } from 'lucide-react';
+import { Home, Camera, MessageCircle, Calendar, User, LogOut } from 'lucide-react';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import LoginScreen from '../components/LoginScreen';
 import HomeScreen from '../components/HomeScreen';
@@ -7,7 +7,6 @@ import StoriesScreen from '../components/StoriesScreen';
 import GroupChatScreen from '../components/GroupChatScreen';
 import EventsScreen from '../components/EventsScreen';
 import ProfileScreen from '../components/ProfileScreen';
-import FundRaisingScreen from '../components/FundRaisingScreen';
 import { Button } from '../components/ui/button';
 
 const AppContent = () => {
@@ -18,7 +17,6 @@ const AppContent = () => {
     { id: 'home', label: 'Home', icon: Home, component: HomeScreen, color: 'from-blue-500 to-cyan-500' },
     { id: 'stories', label: 'Stories', icon: Camera, component: StoriesScreen, color: 'from-purple-500 to-pink-500' },
     { id: 'chat', label: 'Chat', icon: MessageCircle, component: GroupChatScreen, color: 'from-green-500 to-teal-500' },
-    { id: 'fundraising', label: 'Fund', icon: Heart, component: FundRaisingScreen, color: 'from-pink-500 to-rose-500' },
     { id: 'events', label: 'Events', icon: Calendar, component: EventsScreen, color: 'from-orange-500 to-red-500' },
     { id: 'profile', label: 'Profile', icon: User, component: ProfileScreen, color: 'from-indigo-500 to-purple-500' },
   ];
