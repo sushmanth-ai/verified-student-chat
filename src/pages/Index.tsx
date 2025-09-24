@@ -53,13 +53,11 @@ const AppContent = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/50 dark:ring-gray-700/50">
-              <span className="text-white font-bold text-lg">C</span>
+              <span className="text-white font-bold text-lg">V</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold">
-              <span className="text-gray-800 dark:text-gray-200">campu</span>
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">S</span>
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">M</span>
-              <span className="text-gray-800 dark:text-gray-200">edia</span>
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">VitS</span>
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">Media</span>
             </h1>
           </div>
           <div className="flex items-center space-x-2">

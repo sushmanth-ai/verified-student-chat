@@ -71,7 +71,7 @@ const HomeScreen = () => {
 
   // Load profile data
   useEffect(() => {
-    const savedProfile = localStorage.getItem('campusMediaProfile');
+    const savedProfile = localStorage.getItem('vitSMediaProfile');
     if (savedProfile) {
       setProfileData(JSON.parse(savedProfile));
     }
@@ -144,7 +144,7 @@ const HomeScreen = () => {
 
   // Listen for new posts and show notifications
   useEffect(() => {
-    const settings = JSON.parse(localStorage.getItem('campusMediaSettings') || '{}');
+    const settings = JSON.parse(localStorage.getItem('vitSMediaSettings') || '{}');
     
     if (settings.notifications && posts.length > 0) {
       const latestPost = posts[0];
@@ -156,7 +156,7 @@ const HomeScreen = () => {
       if (timeDiff < 10000 && latestPost.authorId !== user?.uid) {
         // Show browser notification
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('New Post on CampusMedia', {
+          new Notification('New Post on VitSMedia', {
             body: `${latestPost.authorName} shared: ${latestPost.content.substring(0, 50)}...`,
             icon: '/favicon.ico'
           });
