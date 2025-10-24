@@ -505,7 +505,7 @@ const HomeScreen = () => {
                     <img 
                       src={post.imageData} 
                       alt={post.imageName || 'Post image'} 
-                      className="w-full h-auto max-h-96 object-cover"
+                      className="w-full h-auto max-h-96 lg:max-h-[600px] object-contain bg-gray-100 dark:bg-gray-900"
                     />
                   </div>
                 )}
