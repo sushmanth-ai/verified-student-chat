@@ -66,8 +66,8 @@ const ProfileScreen = () => {
 
   // Load profile data and settings from localStorage
   useEffect(() => {
-    const savedProfile = localStorage.getItem('vitSMediaProfile');
-    const savedSettings = localStorage.getItem('vitSMediaSettings');
+    const savedProfile = localStorage.getItem('campusMediaProfile');
+    const savedSettings = localStorage.getItem('campusMediaSettings');
     
     if (savedProfile) {
       setProfileData(JSON.parse(savedProfile));

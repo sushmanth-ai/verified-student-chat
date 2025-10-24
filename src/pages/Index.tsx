@@ -53,10 +53,10 @@ const AppContent = () => {
         <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="flex items-center space-x-3 mb-2">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/50 dark:ring-gray-700/50">
-              <span className="text-white font-bold text-xl">V</span>
+              <span className="text-white font-bold text-xl">C</span>
             </div>
             <h1 className="text-2xl font-bold">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">VitS</span>
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">Campus</span>
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">Media</span>
             </h1>
           </div>
@@ -111,10 +111,10 @@ const AppContent = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg ring-2 ring-white/50 dark:ring-gray-700/50">
-              <span className="text-white font-bold text-lg">V</span>
+              <span className="text-white font-bold text-lg">C</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">VitS</span>
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">Campus</span>
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">Media</span>
             </h1>
           </div>

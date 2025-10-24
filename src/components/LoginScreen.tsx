@@ -59,7 +59,7 @@ const LoginScreen = () => {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold">
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">VitS</span>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-extrabold">Campus</span>
             <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-extrabold">Media</span>
           </CardTitle>
           <CardDescription className="text-gray-600 font-medium">

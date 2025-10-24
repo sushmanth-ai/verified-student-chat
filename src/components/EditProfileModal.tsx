@@ -65,7 +65,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
         profileImage,
         updatedAt: new Date().toISOString()
       };
-      localStorage.setItem('vitSMediaProfile', JSON.stringify(profileData));
+      localStorage.setItem('campusMediaProfile', JSON.stringify(profileData));
       
       // Trigger a custom event to notify other components
       window.dispatchEvent(new CustomEvent('profileUpdated', { detail: profileData }));
@@ -88,7 +88,7 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) 
 
   // Load saved profile data
   React.useEffect(() => {
-    const savedProfile = localStorage.getItem('vitSMediaProfile');
+    const savedProfile = localStorage.getItem('campusMediaProfile');
     if (savedProfile) {
       const profileData = JSON.parse(savedProfile);
       setFormData({
