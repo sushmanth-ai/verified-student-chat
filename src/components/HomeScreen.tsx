@@ -497,7 +497,7 @@ const HomeScreen = () => {
               </div>
 
               {/* Post Content */}
-              <div className="px-6 pb-4">
+              <div className="px-6 py-6">
                 <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap text-lg">{post.content}</p>
                 {/* Display image if available */}
                 {post.hasImage && post.imageData && (
