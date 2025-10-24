@@ -381,7 +381,7 @@ const HomeScreen = () => {
 
   return (
     <div className="h-full overflow-y-auto bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-blue-900/20">
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 max-w-2xl mx-auto">
         <CreatePost onPostCreated={() => console.log('Post created')} />
 
         {/* Tab Navigation */}
@@ -448,7 +448,7 @@ const HomeScreen = () => {
               )}
 
               {/* Post Header */}
-              <div className="p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20">
+              <div className="p-4 lg:p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 dark:from-blue-900/20 dark:via-purple-900/20 dark:to-pink-900/20">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
                     <button
@@ -497,7 +497,7 @@ const HomeScreen = () => {
               </div>
 
               {/* Post Content */}
-              <div className="px-6 py-6">
+              <div className="px-4 py-4 lg:px-6 lg:py-6">
                 <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap text-lg">{post.content}</p>
                 {/* Display image if available */}
                 {post.hasImage && post.imageData && (
@@ -512,7 +512,7 @@ const HomeScreen = () => {
               </div>
 
               {/* Post Actions */}
-              <div className="px-6 py-4 bg-gradient-to-r from-gray-50/50 to-blue-50/50 dark:from-gray-800/50 dark:to-blue-900/50 border-t border-gray-100/50 dark:border-gray-700/50">
+              <div className="px-4 py-3 lg:px-6 lg:py-4 bg-gradient-to-r from-gray-50/50 to-blue-50/50 dark:from-gray-800/50 dark:to-blue-900/50 border-t border-gray-100/50 dark:border-gray-700/50">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-6">
                     <button
